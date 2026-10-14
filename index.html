@@ -231,6 +231,7 @@ button:focus-visible { outline: 3px solid var(--chalk); outline-offset: 2px; }
 
 .btn2 { padding: 11px 14px; font-size: 16px; line-height: 1.1; background: var(--ink-2); color: var(--chalk); border: 1px solid var(--chalk-dim); border-radius: 6px; }
 .btn.small { padding: 8px 18px; font-size: 15px; }
+.langq { position: absolute; top: max(10px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); z-index: 3; padding: 6px 12px; font-size: 13px; }
 .cust { top: auto; bottom: 0; left: 0; transform: none; width: 100%; max-height: 52%; border-radius: 14px 14px 0 0; gap: 8px; background: rgba(12, 18, 40, 0.94); }
 .custhead { display: flex; align-items: center; justify-content: space-between; }
 .cust .opt > span { display: block; font-size: 13px; color: var(--chalk-dim); margin-bottom: 5px; }
@@ -427,6 +428,7 @@ body {
     <div class="glfail" id="glfail" hidden>อุปกรณ์หรือเบราว์เซอร์นี้เปิดกราฟิก 3 มิติไม่ได้ ลองเปิดด้วย Chrome หรือ Safari เวอร์ชันล่าสุด</div>
 
     <div class="card menu" id="startCard">
+      <button class="btn small langq" id="langQ" type="button"></button>
       <div class="mhead">
         <span class="eyebrow">ลู่วิ่ง 5 ช่อง</span>
         <h1>วิ่ง <b>1.25</b> กิโล</h1>
@@ -467,6 +469,7 @@ body {
       <h2>ตั้งค่า</h2>
       <label class="fine" for="nameIn">ชื่อของคุณบนอันดับและห้องแข่ง</label>
       <input id="nameIn" type="text" maxlength="12" autocomplete="off" placeholder="ชื่อของคุณ" aria-label="ชื่อของคุณ">
+      <div class="srow"><b>Language / ภาษา</b><button class="tgl" id="langBtn" type="button"></button></div>
       <div class="srow"><b>เสียงทั้งหมด</b><button class="tgl" id="aAll" type="button" aria-pressed="true">เปิด</button></div>
       <div class="asub" id="audSub">
         <div class="srow"><span>ดนตรีพื้นหลัง</span><button class="tgl" id="aMus" type="button" aria-pressed="true">เปิด</button></div>
@@ -679,6 +682,156 @@ body {
 <script>
 (() => {
   'use strict';
+  // ---- Y8 build switch: build_y8.py flips Y8 to true. In the Y8 build there are no friend rooms and ad breaks run between races. ----
+  const Y8 = false;
+  const Y8_CFG = { appId: '', gameId: '' };   // filled in by build_y8.py (appId from account.y8.com, gameId assigned by Y8 after approval)
+  let y8Sdk = null, y8Ready = false, y8Last = 0, y8First = true;
+  if (Y8 && Y8_CFG.appId) {
+    window.addEventListener('y8sdk.ready', () => {
+      try {
+        y8Sdk = window.y8.sdk();
+        y8Sdk.init({ appId: Y8_CFG.appId, autoLogin: false }, { gameId: Y8_CFG.gameId, preloadAdBreaks: 'auto', sound: 'on', onReady: () => { y8Ready = true; } });
+      } catch (e) { y8Sdk = null; }
+    }, { once: true });
+    try {
+      const sc = document.createElement('script'); sc.src = 'https://cdn.y8.com/minimal-sdk/2-0/y8.min.js'; sc.async = true; document.head.appendChild(sc);
+    } catch (e) {}
+    try { if (window.y8 && window.y8.emitReadyEvent) window.y8.emitReadyEvent(); } catch (e) {}
+  }
+  // One ad break between races (first one is a "start" break, later ones "next", at most one every 90 s). Never blocks the game if the SDK is missing or blocked.
+  function y8Break() {
+    return new Promise(res => {
+      if (!Y8 || !y8Ready || !y8Sdk) return res();
+      if (!y8First && Date.now() - y8Last < 90000) return res();
+      let done = false, started = false;
+      const fin = () => { if (done) return; done = true; clearTimeout(tm); y8Last = Date.now(); y8First = false; res(); };
+      const tm = setTimeout(() => { if (!started) fin(); }, 6000);   // the ad never began: carry on
+      try {
+        const first = y8First;
+        const pr = y8Sdk.showAd({ type: first ? 'start' : 'next', name: first ? 'start-game' : 'next-race',
+          beforeAd: () => { started = true; clearTimeout(tm); }, afterAd: fin, adDismissed: fin, adBreakDone: fin });
+        if (pr && pr.catch) pr.catch(fin);
+      } catch (e) { fin(); }
+    });
+  }
+  // ---- language: Thai / English. Thai text stays the source; English is swapped in at the DOM level (dictionary + patterns), so every screen follows. ----
+  const TH = /[฀-๿]/;
+  const EN = {
+    'วิ่ง': 'Run', 'กิโล': 'km', 'เวลา': 'Time', 'เหลือ (กม.)': 'Left (km)', 'กม./ชม.': 'km/h', 'อันดับ': 'Rank', 'หยุด': 'Pause',
+    'เสียง เปิด': 'Sound on', 'เสียง ปิด': 'Sound off', 'จุดออกตัว': 'Start', '0.6 กม.': '0.6 km', 'เส้นชัย 1.25 กม.': 'Finish 1.25 km',
+    'ลู่วิ่ง 5 ช่อง มองจากด้านหลังนักวิ่ง': '5-lane track seen from behind the runner', 'กดค้าง': 'Hold', 'มองหลัง': 'to look back', 'พลัง': 'Power', 'พุ่ง!': 'Boost!',
+    'อุปกรณ์หรือเบราว์เซอร์นี้เปิดกราฟิก 3 มิติไม่ได้ ลองเปิดด้วย Chrome หรือ Safari เวอร์ชันล่าสุด': 'This device or browser cannot run 3D graphics. Try the latest Chrome or Safari.',
+    'ลู่วิ่ง 5 ช่อง': '5-lane track', 'จับจังหวะ Skill check แล้วพุ่งแซงคู่แข่งให้ทัน': 'Nail the skill checks and burst past your rivals',
+    'ระดับ': 'Level', 'ระดับคู่แข่ง': 'Rival level', 'แมพ': 'Map', 'เล่นกับบอท': 'Play vs bots', 'แข่งกับผี': 'Race ghosts', 'สู้กับสถิติของผู้เล่นจริง': "Beat real players' records",
+    'สร้างห้อง': 'Create room', 'แข่งสดกับเพื่อน': 'Race friends live', 'ตัวละคร': 'Character', 'วิธีเล่น': 'How to play', 'ตั้งค่า': 'Settings',
+    'นักวิ่งวิ่งเองอัตโนมัติ ระยะ 1.25 กิโลเมตร ใช้เวลาราว 3 นาทีครึ่ง': 'Your runner runs by itself over 1.25 km, about 3½ minutes.',
+    'เมื่อวงกลม Skill check โผล่กลางจอ แตะตรงไหนก็ได้ตอนเข็มเข้าโซนทอง': 'When the skill-check circle appears, tap anywhere as the needle enters the gold zone.',
+    'บางรอบเข็มหมุนย้อน โซนทองขยับ หรือต้องแตะสองจังหวะ': 'Sometimes the needle reverses, the gold zone moves, or you must tap twice.',
+    'กดถูกจะเติมหลอดพลังด้านซ้าย พอเต็มจะมีปุ่ม "พุ่ง!" ด้านขวา แตะเพื่อพุ่งนาน 7 วินาที': 'A good tap fills the power bar on the left. When full, a "Boost!" button appears on the right: tap it to boost for 7 seconds.',
+    'ระหว่างพุ่ง Skill check มาถี่ขึ้น กดไม่พลาดจะต่อเวลาพุ่งได้ถึง 20 วินาที พลาดแล้วหยุดพุ่ง': 'While boosting, skill checks come faster. Keep hitting them to extend the boost up to 20 seconds; a miss ends it.',
+    'กดถูกแล้วรอ 10 วินาทีถึงมาอีกรอบ ถ้าพลาดจะโผล่มาใหม่ทันที': 'After a hit the next check comes in 10 seconds; after a miss it comes right away.',
+    'กดค้างปุ่ม "มองหลัง" เพื่อดูคู่แข่งที่ตามมา': 'Hold the "look back" button to see the rivals behind you.',
+    'อย่าแตะก่อนสัญญาณออกตัว บนคอมพิวเตอร์กด Space เพื่อจับจังหวะ': "Don't tap before the start signal. On a computer, press Space to time your hits.",
+    'กลับ': 'Back', 'ชื่อของคุณบนอันดับและห้องแข่ง': 'Your name on leaderboards and rooms', 'ชื่อของคุณ': 'Your name',
+    'เสียงทั้งหมด': 'All sound', 'เปิด': 'On', 'ปิด': 'Off', 'ดนตรีพื้นหลัง': 'Background music', 'ระดับเสียงดนตรี': 'Music volume',
+    'เสียงเอฟเฟกต์ (พุ่ง, Skill check)': 'Sound effects (boost, skill check)', 'ระดับเสียงเอฟเฟกต์': 'Effects volume', 'เสียงพูด (Perfect! / Faster!)': 'Voice (Perfect! / Faster!)',
+    'ห้องแข่งสด': 'Live room', 'ออนไลน์สด': 'Online live', 'สร้างห้องใหม่': 'Create new room', 'ห้องที่เปิดอยู่ตอนนี้ (กดเพื่อเข้า)': 'Open rooms (tap to join)',
+    'หรือใส่รหัสห้องของเพื่อน (ตัวอักษร/ตัวเลข 3–8 ตัว)': "Or enter a friend's room code (3–8 letters or digits)", 'รหัสห้อง': 'Room code', 'เข้าห้อง': 'Join',
+    '· ระดับ': '· level', 'แต่งตัว': 'Dress up', 'เริ่มแข่ง': 'Start race',
+    'ปรับแต่งตัวละคร': 'Customize character', 'เสร็จ': 'Done', 'ลากบนจอเพื่อหมุนมุมกล้อง บีบสองนิ้วเพื่อซูม': 'Drag to rotate the camera, pinch to zoom',
+    'หยุดเกม': 'Paused', 'หยุดเกมอยู่': 'Game paused', 'เวลาและคู่แข่งหยุดนิ่งไว้ให้': 'Time and rivals are frozen', 'เล่นต่อ': 'Resume', 'ออกจากเกม': 'Quit',
+    'ชนะ!': 'You win!', 'วิ่งอีกครั้ง': 'Run again', 'เมนูหลัก': 'Main menu',
+    'ง่าย': 'Easy', 'ยาก': 'Hard', 'ไนท์': 'Knight', 'ฟ้า': 'Fah', 'คุณ': 'You', 'เจ็ท': 'Jet', 'มิ้นท์': 'Mint',
+    'สนามกีฬา': 'Stadium', 'ฟ้าปราสาท': 'Sky castles', 'ภูเขาหิมะ': 'Snow mountain',
+    'ชนกรวย!': 'Hit a cone!', 'น้ำดื่ม! เร่งขึ้น': 'Water! Speed up', 'แตะตรงไหนก็ได้เมื่อเข็มวิ่งเข้าโซนทอง': 'Tap anywhere when the needle enters the gold zone',
+    'แตะตรงไหนก็ได้เมื่อเข็มอยู่ในโซนทอง': 'Tap anywhere when the needle is in the gold zone',
+    'แสงเรืองสี': 'Glow', 'ชุด': 'Outfit', 'กางเกง/รองเท้า': 'Shorts/shoes', 'ผิว': 'Skin', 'ผม': 'Hair', 'เลือกสีเอง': 'Pick a custom color',
+    'บ๊อบ': 'Bob', 'สั้น': 'Short', 'หางม้า': 'Ponytail', 'สองจุก': 'Pigtails', 'มวยผม': 'Bun', 'โมฮอว์ก': 'Mohawk', 'อัฟโฟร': 'Afro', 'โกน': 'Shaved',
+    'ไม่มี': 'None', 'เขาควาย': 'Buffalo horns', 'เขากระทิง': 'Bull horns', 'เขาแรด': 'Rhino horn', 'ไม่ใส่': 'None',
+    'หมวกแก๊ป': 'Cap', 'ไหมพรม': 'Beanie', 'ผ้าคาดหัว': 'Headband', 'หมวกกันน็อก': 'Helmet', 'มงกุฎ': 'Crown', 'หมวกปาร์ตี้': 'Party hat', 'หมวกทรงสูง': 'Top hat',
+    'แว่นดำ': 'Shades', 'แว่นกลม': 'Round glasses', 'หน้ากาก': 'Mask', 'ผ้าปิดตา': 'Eye patch', 'หนวด': 'Mustache',
+    'ผ้าคลุม': 'Cape', 'เป้': 'Backpack', 'ปีก': 'Wings', 'เจ็ตแพ็ก': 'Jetpack', 'ผ้าพันคอ': 'Scarf', 'โบว์ไทร์': 'Bow tie', 'สร้อย': 'Chain',
+    'ทรงผม': 'Hairstyle', 'เขา': 'Horns', 'หมวก': 'Hat', 'หน้า': 'Face', 'ด้านหลัง': 'Back', 'คอ': 'Neck',
+    'เข้าเส้นชัยแล้ว': 'Finished', 'เข้าเส้นชัย!': 'Finish!', 'ย้อนทาง!': 'Reverse!', 'โซนขยับ!': 'Moving zone!', 'แตะ 2 จังหวะ': 'Tap twice',
+    'ออกตัวเร็วเกินไป! จะออกตัวช้าลง': 'False start! Your launch will be slower', 'ออกตัวเร็วเกินไป! ออกตัวช้าลง': 'False start! Slower launch',
+    'เยี่ยม!': 'Perfect!', 'ดี': 'Good', 'ช้าไป!': 'Too late!', 'พลาด!': 'Miss!', 'ประจำที่': 'On your marks', 'เตรียม': 'Set', 'วิ่ง!': 'Go!',
+    'จบการแข่งขัน': 'Race over', 'รอจังหวะ…': 'Wait for it…', 'ยังไม่ถึงเส้นชัย': 'Did not finish', 'ลองจับจังหวะให้แม่นกว่านี้': 'Try timing your taps better',
+    'สถิติใหม่': 'New best', 'ผี': 'Ghost', 'สด': 'Live', 'นักวิ่ง': 'Runner', 'ผู้เล่น': 'Player',
+    'โหมดออนไลน์เชื่อมต่อไม่ได้ ตรวจอินเทอร์เน็ตแล้วโหลดหน้าใหม่': 'Online mode cannot connect. Check your internet and reload.',
+    'ห้องแข่งสดเชื่อมต่อไม่ได้ในตอนนี้': 'Live rooms cannot connect right now', 'แข่งกับผียังเชื่อมต่อไม่ได้ในตอนนี้': 'Ghost racing cannot connect right now',
+    'กลับห้องแข่ง': 'Back to room', 'บันทึกผีไม่สำเร็จ': 'Could not save your ghost', 'บันทึกการวิ่งของคุณเป็นผีแล้ว': 'Your run was saved as a ghost',
+    'อัปเดตชุดของผีแล้ว': 'Ghost outfit updated', 'กำลังจับคู่…': 'Matching…', 'ห้อง': 'Room', '(กำลังแข่ง)': '(racing)', 'เต็ม': 'Full', 'เข้า': 'Join',
+    'ยังไม่มีห้องที่เปิดอยู่ กด "สร้างห้องใหม่" แล้วบอกเพื่อนให้กดหาห้อง': 'No open rooms yet. Tap "Create new room" and tell your friends to look for it.',
+    'ออกจากห้อง': 'Leave room', 'เจ้าของห้อง': 'Host', 'กำลังแข่ง': 'Racing', 'พร้อม': 'Ready', 'กำลังเข้าห้อง…': 'Joining room…',
+    'ห้องเต็ม 5 คน คนที่เกินรอรอบหน้า': 'Room is full (5). Extra players wait for the next round.', 'รอเพื่อนเข้าห้อง บอกรหัสให้เพื่อน': 'Waiting for friends. Share the room code.',
+    'พร้อมแล้วกดเริ่มแข่งได้เลย': 'Ready. Start the race!', 'รอเจ้าของห้องกดเริ่ม': 'Waiting for the host to start',
+    'รหัสห้องต้องมี 3–8 ตัวอักษรหรือตัวเลข': 'Room code must be 3–8 letters or digits',
+    'ไม่พบห้องนี้ ห้องที่ไม่มีคนอยู่จะถูกลบทันที ตรวจรหัสอีกครั้ง หรือกด "สร้างห้องใหม่"': 'Room not found. Empty rooms are deleted right away. Check the code or tap "Create new room".',
+    'เข้าห้องไม่ได้ ลองใหม่อีกครั้ง': 'Could not join. Please try again.', 'กำลังจับคู่': 'Matching'
+  };
+  const EN_RX = [
+    [/^เยี่ยม! x(\d+)$/, m => 'Perfect! x' + m[1]],
+    [/^จับจังหวะ: เยี่ยม (\d+) · ดี (\d+) · พลาด (\d+)$/, m => 'Timing: Perfect ' + m[1] + ' · Good ' + m[2] + ' · Miss ' + m[3]],
+    [/^เข้าเส้นชัยที่ (\d+)$/, m => 'Finished #' + m[1]],
+    [/^เวลา ([\d.:]+)(?: ช้ากว่าที่ 1 อยู่ ([\d.]+) วิ)?$/, m => 'Time ' + m[1] + (m[2] ? ' · ' + m[2] + ' s behind 1st' : '')],
+    [/^ระดับ(.+): ยังไม่มีสถิติ$/, m => 'Level ' + trT(m[1]) + ': no record yet'],
+    [/^สถิติของคุณ ระดับ(.+): (.+)$/, m => 'Your best, level ' + trT(m[1]) + ': ' + m[2]],
+    [/^แข่งสดกับผู้เล่นจริง (\d+) คน$/, m => 'Live race vs ' + m[1] + ' real players'],
+    [/^แข่งกับผีของผู้เล่นจริง (\d+) คน$/, m => 'Racing ' + m[1] + " real players' ghosts"],
+    [/^นักวิ่ง(\d+)$/, m => 'Runner ' + m[1]],
+    [/^ผีของคุณในระบบยังเร็วกว่า \((.+)\)$/, m => 'Your saved ghost is still faster (' + m[1] + ')'],
+    [/^สี (#?[0-9a-fA-F]+)$/, m => 'Color ' + m[1]],
+    [/^(.+) \(กำลังแข่ง\)$/, m => trT(m[1]) + ' (racing)']
+  ];
+  let lang = 'th';
+  try { const sv = localStorage.getItem('run125:lang'); lang = sv === 'en' || sv === 'th' ? sv : (/^th/i.test(navigator.language || '') ? 'th' : 'en'); } catch (e) {}
+  function trCore(t) {
+    if (EN[t] !== undefined) return EN[t];
+    for (let i = 0; i < EN_RX.length; i++) { const m = EN_RX[i][0].exec(t); if (m) return EN_RX[i][1](m); }
+    if (t.indexOf(' · ') > 0) { const parts = t.split(' · ').map(p => { const r = trCore(p.trim()); return r === null ? p : r; }); return parts.join(' · '); }
+    return null;
+  }
+  const trT = t => { const r = trCore(t.trim()); return r === null ? t : r; };
+  function trStr(s) { const t = s.trim(); if (!t || !TH.test(t)) return null; const r = trCore(t); return r === null || r === t ? null : s.replace(t, () => r); }
+  const I18N_ATTR = ['aria-label', 'placeholder', 'title'];
+  function i18nText(n) {
+    const v = n.nodeValue; if (!v || !TH.test(v)) return;
+    const r = trStr(v); if (r !== null) { n.__th = v; n.__en = r; n.nodeValue = r; }
+  }
+  function i18nAttrs(el) {
+    for (let i = 0; i < I18N_ATTR.length; i++) {
+      const a = I18N_ATTR[i], v = el.getAttribute(a);
+      if (v && TH.test(v)) { const r = trStr(v); if (r !== null) { (el.__ta = el.__ta || {})[a] = [v, r]; el.setAttribute(a, r); } }
+    }
+  }
+  function i18nWalk(root, back) {
+    if (root.nodeType === 3) {
+      if (back) { if (root.__th !== undefined && root.nodeValue === root.__en) root.nodeValue = root.__th; } else i18nText(root);
+      return;
+    }
+    if (root.nodeType !== 1 || root.tagName === 'SCRIPT' || root.tagName === 'STYLE') return;
+    if (back) { if (root.__ta) for (const a in root.__ta) if (root.getAttribute(a) === root.__ta[a][1]) root.setAttribute(a, root.__ta[a][0]); } else i18nAttrs(root);
+    for (let c = root.firstChild; c; c = c.nextSibling) i18nWalk(c, back);
+  }
+  function applyLang() {
+    try { document.documentElement.lang = lang; } catch (e) {}
+    try { if (document.head) i18nWalk(document.head, lang !== 'en'); if (document.body) i18nWalk(document.body, lang !== 'en'); } catch (e) {}
+    ['langBtn', 'langQ'].forEach(id => { const b = document.getElementById(id); if (b) b.textContent = lang === 'en' ? 'ภาษาไทย' : 'English'; });
+  }
+  function setLang(l) { lang = l; try { localStorage.setItem('run125:lang', l); } catch (e) {} applyLang(); }
+  if (typeof MutationObserver !== 'undefined' && document.body) {
+    new MutationObserver(recs => {
+      if (lang !== 'en') return;
+      for (let i = 0; i < recs.length; i++) {
+        const r = recs[i];
+        if (r.type === 'characterData') i18nText(r.target);
+        else if (r.type === 'attributes') i18nAttrs(r.target);
+        else for (let k = 0; k < r.addedNodes.length; k++) i18nWalk(r.addedNodes[k]);
+      }
+    }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: I18N_ATTR });
+  }
+  ['langBtn', 'langQ'].forEach(id => { const b = document.getElementById(id); if (b) b.addEventListener('click', () => setLang(lang === 'en' ? 'th' : 'en')); });
+  applyLang();
   const $ = id => document.getElementById(id);
   const cv = $('cv'), stageEl = $('stage');
 
@@ -1532,7 +1685,7 @@ body {
   const cleanName = v => String(v == null ? '' : v).replace(/[\u0000-\u001f<>&"'`]/g, '').trim().slice(0, 12);
   let playerName = '';
   try { playerName = cleanName(localStorage.getItem('run125:name')); } catch (e) {}
-  if (!playerName) { playerName = 'นักวิ่ง' + (100 + Math.floor(Math.random() * 900)); try { localStorage.setItem('run125:name', playerName); } catch (e) {} }
+  if (!playerName) { playerName = (lang === 'en' ? 'Runner' : 'นักวิ่ง') + (100 + Math.floor(Math.random() * 900)); try { localStorage.setItem('run125:name', playerName); } catch (e) {} }
   $('nameIn').value = playerName;
   $('nameIn').addEventListener('change', () => {
     playerName = cleanName($('nameIn').value) || playerName; $('nameIn').value = playerName;
@@ -1546,6 +1699,7 @@ body {
     $('mmGhost').disabled = !mmReady; $('mmLive').disabled = !rtOk;
     $('mmLine').textContent = !mmReady && !rtOk ? 'โหมดออนไลน์เชื่อมต่อไม่ได้ ตรวจอินเทอร์เน็ตแล้วโหลดหน้าใหม่' : !rtOk ? 'ห้องแข่งสดเชื่อมต่อไม่ได้ในตอนนี้' : !mmReady ? 'แข่งกับผียังเชื่อมต่อไม่ได้ในตอนนี้' : '';
     $('again').textContent = effMode() === 'live' ? 'กลับห้องแข่ง' : 'วิ่งอีกครั้ง';
+    if (Y8) { $('mmLive').hidden = true; $('mmLive').style.display = 'none'; if (mmReady) $('mmLine').textContent = ''; }
   }
   async function mmInit() {
     try {
@@ -1556,7 +1710,7 @@ body {
       if (u) { mmUid = await u.id(); const w = await u.can('data.write'); mmCanWrite = w !== false; }
       mmReady = !!(mmDb && mmUid);
     } catch (e) { mmReady = false; }
-    if (!window.claude || !claude.use) rtOk = false;
+    if (Y8 || !window.claude || !claude.use) rtOk = false;
     if (!rtOk && mmMode === 'live') mmMode = 'bot';
     paintMM();
   }
@@ -1616,6 +1770,7 @@ body {
   let starting = false;
   // the live-room (Realtime) connection exists only while the player is on the room screens
   async function ensureLiveRt() {
+    if (Y8) return null;
     if (liveRt) return liveRt;
     try { liveRt = await claude.use('room'); } catch (e) { liveRt = null; }
     return liveRt;
@@ -1636,6 +1791,7 @@ body {
     starting = true;
     const ag = $('again'), agTxt = ag.textContent;
     try {
+      if (Y8) await y8Break();
       let list = [];
       if (effMode() === 'ghost') {
         $('mmGhost').disabled = true; ag.disabled = true; ag.textContent = 'กำลังจับคู่…'; $('mmLine').textContent = 'กำลังจับคู่…';
