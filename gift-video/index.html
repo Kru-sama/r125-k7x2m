@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08161e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Gift Video Player</title>
+<style>
+:root{--bg:#08161e;--panel:#0f2230;--line:#1d3a4b;--fg:#e8f1f5;--mut:#8aa3ad;--acc:#ffb020;--ok:#5fd38a;--bad:#ff8a7a}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.wrap{max-width:560px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0 0 2px}
+.sub{color:var(--mut);font-size:13px}
+.sub.ok{color:var(--ok)}.sub.bad{color:var(--bad)}
+.head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:0 0 10px;font-weight:600}
+input[type=text],input[type=password]{width:100%;min-height:44px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:#0a1a24;color:var(--fg);font:inherit;margin-bottom:8px}
+button,.btn{min-height:44px;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:#12303f;color:var(--fg);font:inherit;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-align:center}
+button.pri{background:var(--acc);color:#1b1200;border-color:var(--acc);font-weight:700}
+button.sm,.btn.sm{min-height:40px;padding:6px 10px;font-size:13px}
+button[aria-pressed=true]{border-color:var(--acc);color:var(--acc)}
+button.listen.on{background:var(--acc);color:#1b1200;border-color:var(--acc)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.slot{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px;background:#0a1a24}
+.slot .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-weight:600}
+.file{color:var(--mut);font-size:12px;word-break:break-all;margin-top:6px}
+.file.has{color:var(--ok)}
+input[type=file]{display:none}
+.note{color:var(--mut);font-size:13px}
+label.chk{display:flex;gap:10px;align-items:center;min-height:44px}
+label.chk input{width:22px;height:22px}
+/* stage */
+.stage{position:relative;background:#000;border:1px solid var(--line);border-radius:14px;overflow:hidden;aspect-ratio:9/16;max-height:52vh;margin:0 auto}
+.stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
+body.fit .stage video{object-fit:contain}
+#vClip{opacity:0;pointer-events:none}
+#vClip.on{opacity:1}
+.ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--mut);font-size:14px}
+#toast{position:absolute;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));text-align:center;font-weight:700;text-shadow:0 2px 6px #000;opacity:0;transition:opacity .25s;pointer-events:none}
+#toast.on{opacity:1}
+.fab{position:fixed;z-index:20;top:max(8px,env(safe-area-inset-top));display:none;opacity:0;pointer-events:none;transition:opacity .25s;background:rgba(8,22,30,.85)}
+body.live.showfab .fab{opacity:1;pointer-events:auto}
+body.live .fab{display:inline-flex}
+#exit{right:8px}#skip{left:8px}
+body.live .ui{display:none!important}
+body.live .wrap{max-width:none;padding:0}
+body.live .stage{position:fixed;inset:0;max-height:none;aspect-ratio:auto;border:0;border-radius:0;margin:0;z-index:10}
+</style>
+</head>
+<body>
+<button id="skip" class="fab" type="button" data-i18n="bSkip">Skip clip</button>
+<button id="exit" class="fab" type="button" data-i18n="bExit">Exit live mode</button>
+<div class="wrap">
+  <div class="head ui">
+    <div><h1 data-i18n="title">Gift Video Player</h1><div class="sub" data-i18n="tag">Loops a video. Each gift plays its own clip.</div></div>
+    <button class="sm" id="lang" type="button">ภาษาไทย</button>
+  </div>
+
+  <div class="stage" id="stage">
+    <video id="vIdle" playsinline loop muted></video>
+    <video id="vClip" playsinline></video>
+    <div class="ph" id="ph" data-i18n="ph">Pick a looping video below</div>
+    <div id="toast"></div>
+  </div>
+
+  <section class="ui">
+    <h2 data-i18n="hLive">Connect to TikTok LIVE</h2>
+    <input type="text" id="tuser" data-i18n-ph="phUser" autocomplete="off" autocapitalize="off">
+    <input type="password" id="tkey" data-i18n-ph="phKey" autocomplete="off">
+    <div class="row"><button id="conn" type="button" class="pri">Connect</button><span id="cstat" class="sub"></span></div>
+  </section>
+
+  <section class="ui">
+    <h2 data-i18n="hIdle">Looping video (plays all the time)</h2>
+    <div class="row">
+      <label class="btn sm"><span data-i18n="bPick">Pick video</span><input type="file" id="idleFile" accept="video/*"></label>
+      <button class="sm" id="idleClear" type="button" data-i18n="bClear">Remove</button>
+    </div>
+    <div class="file" id="idleName"></div>
+  </section>
+
+  <section class="ui">
+    <h2 data-i18n="hSlots">Gifts and their clips</h2>
+    <p class="note" data-i18n="slotNote">Tap Listen, then send that gift once in your LIVE and the game remembers it. Or type the gift name exactly as TikTok shows it. One gift = one clip, played once, then the loop continues.</p>
+    <div id="slots"></div>
+    <button id="addSlot" class="sm" type="button" data-i18n="bAdd">+ Add gift</button>
+  </section>
+
+  <section class="ui">
+    <h2 data-i18n="hOpt">Options</h2>
+    <label class="chk"><input type="checkbox" id="optIdleSound"><span data-i18n="oIdleSound">Play sound from the looping video</span></label>
+    <label class="chk"><input type="checkbox" id="optFill" checked><span data-i18n="oFill">Fill the screen (crop edges)</span></label>
+    <div class="row" style="margin-top:8px"><button class="pri" id="live" type="button" data-i18n="bLive">Start live mode</button><button id="stop" type="button" data-i18n="bStop">Stop playing</button></div>
+    <p class="note" data-i18n="liveNote">Live mode hides the controls. Tap the screen to show Skip and Exit for 4 seconds. Keep this page open and the screen on.</p>
+  </section>
+
+  <section class="ui">
+    <h2 data-i18n="hLog">Log</h2>
+    <div id="log" class="note" style="max-height:150px;overflow:auto"></div>
+  </section>
+</div>
+
+<script>
+'use strict';
+const I18N={
+en:{title:'Gift Video Player',tag:'Loops a video. Each gift plays its own clip.',ph:'Pick a looping video below',
+ hLive:'Connect to TikTok LIVE',phUser:'Your TikTok username (no @)',phKey:'TikTool API key',bConnect:'Connect',bDisconnect:'Disconnect',
+ idle:'Not connected',needKey:'Enter your username and API key',connecting:'Connecting…',connected:'Connected. Waiting for events…',
+ received:(n,t)=>'Connected. '+n+' events received (last: '+t+')',dropped:(c,r)=>'Dropped ('+c+' '+(r||'')+'). Reconnecting…',connFail:'Could not open the connection. Retrying…',
+ hIdle:'Looping video (plays all the time)',bPick:'Pick video',bClear:'Remove',noFile:'No video chosen',
+ hSlots:'Gifts and their clips',slotNote:'Tap Listen, then send that gift once in your LIVE and the game remembers it. Or type the gift name exactly as TikTok shows it. One gift = one clip, played once, then the loop continues.',
+ bAdd:'+ Add gift',gift:n=>'Gift '+n,phGift:'Gift name (e.g. Rose)',bListen:'Listen',bListening:'Send the gift…',bTest:'Test',bRemove:'Remove',
+ hOpt:'Options',oIdleSound:'Play sound from the looping video',oFill:'Fill the screen (crop edges)',bLive:'Start live mode',bStop:'Stop playing',
+ liveNote:'Live mode hides the controls. Tap the screen to show Skip and Exit for 4 seconds. Keep this page open and the screen on.',
+ hLog:'Log',bSkip:'Skip clip',bExit:'Exit live mode',
+ learned:(g,n)=>'Linked gift "'+g+'" to slot '+n,unmapped:g=>'Gift "'+g+'" has no clip yet',noClip:n=>'Slot '+n+' has no video yet',
+ queued:(w,g,n)=>w+' · '+g+(n>1?' ×'+n:''),dropQ:n=>n+' clip(s) skipped because the queue is full',ready:'Ready',stopped:'Stopped'},
+th:{title:'เครื่องเล่นวิดีโอตามของขวัญ',tag:'เล่นวิดีโอวนลูป พอมีของขวัญก็เล่นคลิปของของขวัญนั้น',ph:'เลือกวิดีโอวนลูปด้านล่าง',
+ hLive:'เชื่อมต่อ TikTok LIVE',phUser:'ชื่อ TikTok ของคุณ (ไม่ต้องใส่ @)',phKey:'API key ของ TikTool',bConnect:'เชื่อมต่อ',bDisconnect:'ตัดการเชื่อมต่อ',
+ idle:'ยังไม่ได้เชื่อมต่อ',needKey:'ใส่ชื่อผู้ใช้และ API key ก่อน',connecting:'กำลังเชื่อมต่อ…',connected:'เชื่อมต่อแล้ว รอข้อมูล…',
+ received:(n,t)=>'เชื่อมต่อแล้ว รับข้อมูล '+n+' รายการ (ล่าสุด: '+t+')',dropped:(c,r)=>'หลุด ('+c+' '+(r||'')+') กำลังต่อใหม่…',connFail:'เปิดการเชื่อมต่อไม่ได้ กำลังลองใหม่…',
+ hIdle:'วิดีโอวนลูป (เล่นตลอด)',bPick:'เลือกวิดีโอ',bClear:'ลบ',noFile:'ยังไม่ได้เลือกวิดีโอ',
+ hSlots:'ของขวัญและคลิปของมัน',slotNote:'กด "ฟัง" แล้วส่งของขวัญนั้นในไลฟ์ 1 ครั้ง ระบบจะจำให้ หรือพิมพ์ชื่อของขวัญตามที่ TikTok แสดง ของขวัญ 1 ชิ้น = 1 คลิป เล่นครั้งเดียวแล้วกลับไปวนลูป',
+ bAdd:'+ เพิ่มของขวัญ',gift:n=>'ของขวัญ '+n,phGift:'ชื่อของขวัญ (เช่น Rose)',bListen:'ฟัง',bListening:'ส่งของขวัญเลย…',bTest:'ทดสอบ',bRemove:'ลบ',
+ hOpt:'ตัวเลือก',oIdleSound:'เปิดเสียงจากวิดีโอวนลูป',oFill:'เต็มจอ (ตัดขอบ)',bLive:'เริ่มโหมดไลฟ์',bStop:'หยุดเล่น',
+ liveNote:'โหมดไลฟ์จะซ่อนปุ่ม แตะหน้าจอเพื่อแสดงปุ่มข้ามคลิปและออก 4 วินาที เปิดหน้านี้ค้างไว้และอย่าให้จอดับ',
+ hLog:'บันทึก',bSkip:'ข้ามคลิป',bExit:'ออกจากโหมดไลฟ์',
+ learned:(g,n)=>'ผูกของขวัญ "'+g+'" กับช่อง '+n,unmapped:g=>'ของขวัญ "'+g+'" ยังไม่มีคลิป',noClip:n=>'ช่อง '+n+' ยังไม่มีวิดีโอ',
+ queued:(w,g,n)=>w+' · '+g+(n>1?' ×'+n:''),dropQ:n=>'ข้าม '+n+' คลิป เพราะคิวเต็ม',ready:'พร้อม',stopped:'หยุดแล้ว'}
+};
+const KEY='giftvideo.cfg.v1';
+let cfg={user:'',key:'',lang:'en',idleSound:false,fill:true,slots:[]};
+try{Object.assign(cfg,JSON.parse(localStorage.getItem(KEY)||'{}'));}catch(e){}
+if(!Array.isArray(cfg.slots)||!cfg.slots.length)cfg.slots=Array.from({length:6},(_,i)=>({id:'s'+(i+1),name:'',gid:null}));
+let LANG=cfg.lang==='th'?'th':'en';
+function L(k,...a){const v=I18N[LANG][k];return typeof v==='function'?v(...a):v;}
+function save(){cfg.lang=LANG;try{localStorage.setItem(KEY,JSON.stringify(cfg));}catch(e){}}
+const $=id=>document.getElementById(id);
+
+/* ---------- video storage (IndexedDB keeps the chosen files on this phone) ---------- */
+const DB={
+  db:null,
+  open(){return new Promise(res=>{try{const r=indexedDB.open('giftvideo',1);r.onupgradeneeded=()=>r.result.createObjectStore('clips');r.onsuccess=()=>{DB.db=r.result;res(true);};r.onerror=()=>res(false);}catch(e){res(false);}});},
+  tx(m){return DB.db.transaction('clips',m).objectStore('clips');},
+  get(k){return new Promise(res=>{if(!DB.db)return res(null);const q=DB.tx('readonly').get(k);q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null);});},
+  put(k,v){return new Promise(res=>{if(!DB.db)return res(false);const q=DB.tx('readwrite').put(v,k);q.onsuccess=()=>res(true);q.onerror=()=>res(false);});},
+  del(k){return new Promise(res=>{if(!DB.db)return res(false);const q=DB.tx('readwrite').delete(k);q.onsuccess=()=>res(true);q.onerror=()=>res(false);});}
+};
+const clips={};   // key -> {name,url}
+function setClip(k,file){
+  if(clips[k]&&clips[k].url)URL.revokeObjectURL(clips[k].url);
+  clips[k]={name:file.name||'video',url:URL.createObjectURL(file)};
+}
+async function loadClips(){
+  await DB.open();
+  for(const k of ['idle',...cfg.slots.map(s=>s.id)]){
+    const r=await DB.get(k);if(r&&r.blob)setClip(k,r.blob.name?r.blob:new File([r.blob],r.name||'video',{type:r.blob.type}));
+    if(r&&r.name&&clips[k])clips[k].name=r.name;
+  }
+}
+
+/* ---------- log ---------- */
+function log(t){
+  const d=document.createElement('div');d.textContent=new Date().toLocaleTimeString()+'  '+t;
+  const box=$('log');box.prepend(d);while(box.children.length>40)box.lastChild.remove();
+}
+
+/* ---------- player ---------- */
+const vIdle=$('vIdle'),vClip=$('vClip'),toast=$('toast');
+let started=false,playing=false,cur=null,guard=null,toastT=null;
+const queue=[],MAXQ=15;
+function applyIdle(){
+  const c=clips.idle;
+  $('ph').style.display=c?'none':'flex';
+  if(c){if(vIdle.dataset.src!==c.url){vIdle.src=c.url;vIdle.dataset.src=c.url;}}
+  else{vIdle.removeAttribute('src');vIdle.dataset.src='';vIdle.load();}
+  vIdle.muted=!cfg.idleSound||playing;
+  if(started&&c)vIdle.play().catch(()=>{});
+}
+function say(t){toast.textContent=t;toast.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>toast.classList.remove('on'),3000);}
+function endClip(){
+  clearTimeout(guard);
+  vClip.classList.remove('on');vClip.pause();vClip.removeAttribute('src');vClip.load();
+  playing=false;cur=null;applyIdle();pump();
+}
+function pump(){
+  if(playing||!queue.length)return;
+  const it=queue.shift(),c=clips[it.id];
+  if(!c){pump();return;}
+  playing=true;cur=it;vIdle.muted=true;
+  vClip.src=c.url;vClip.muted=false;vClip.currentTime=0;
+  vClip.classList.add('on');
+  guard=setTimeout(endClip,10*60*1000);
+  vClip.play().catch(()=>{vClip.muted=true;vClip.play().catch(endClip);});
+}
+vClip.addEventListener('ended',endClip);
+vClip.addEventListener('error',()=>{if(playing)endClip();});
+function enqueue(id,who,gname,n){
+  let dropped=0;
+  for(let k=0;k<n;k++){if(queue.length>=MAXQ)dropped++;else queue.push({id,who,gname});}
+  if(dropped)log(L('dropQ',dropped));
+  if(n>dropped)say(L('queued',who,gname,n-dropped));
+  pump();
+}
+function startPlayback(){started=true;applyIdle();}
+function stopPlayback(){started=false;queue.length=0;if(playing)endClip();vIdle.pause();log(L('stopped'));}
+
+/* ---------- gift to clip mapping ---------- */
+const slotNo=id=>cfg.slots.findIndex(s=>s.id===id)+1;
+function slotForGift(name,id){
+  for(const s of cfg.slots)if(s.gid!=null&&id!=null&&String(s.gid)===String(id))return s;
+  const n=String(name||'').trim().toLowerCase();
+  if(n)for(const s of cfg.slots)if(s.name&&s.name.trim().toLowerCase()===n)return s;
+  return null;
+}
+let learning=null;
+const streaks=new Map(),unmappedSeen=new Map();
+setInterval(()=>{const now=performance.now();streaks.forEach((v,k)=>{if(now-v.t>8000)streaks.delete(k);});},2000);
+const viewerName=d=>(d.user&&(d.user.nickname||d.user.uniqueId))||d.nickname||d.uniqueId||'Viewer';
+function onGift(d){
+  const gname=d.giftName||'',gid=d.giftId==null?null:d.giftId,who=viewerName(d);
+  if(learning){
+    const s=cfg.slots.find(x=>x.id===learning);learning=null;
+    if(s){s.name=gname;s.gid=gid;save();renderSlots();log(L('learned',gname||gid,slotNo(s.id)));}
+    return;
+  }
+  const s=slotForGift(gname,gid);
+  if(!s){
+    const k=gname||String(gid),now=performance.now();
+    if(now-(unmappedSeen.get(k)||0)>10000){unmappedSeen.set(k,now);log(L('unmapped',k));}
+    return;
+  }
+  let n;   // streak gifts arrive as growing frames: count only what is new
+  if(d.giftType===1||d.repeatEnd===false){
+    const key=who+'|'+(gid==null?gname:gid),rc=Math.max(1,d.repeatCount||1),prev=streaks.get(key);
+    n=prev&&rc>=prev.c?rc-prev.c:rc;
+    if(d.repeatEnd)streaks.delete(key);else streaks.set(key,{c:rc,t:performance.now()});
+  }else n=Math.max(1,d.repeatCount||1);
+  if(n>0)enqueue(s.id,who,gname||s.name,n);
+}
+
+/* ---------- live connection (TikTool WebSocket) ---------- */
+const conn={ws:null,want:false,retry:null,state:'off',events:0,key:'idle',args:[]};
+function setConn(s,key,...args){conn.state=s;conn.key=key;conn.args=args;renderConn();}
+function renderConn(){
+  $('cstat').textContent=L(conn.key||'idle',...(conn.args||[]));
+  $('cstat').className='sub '+(conn.state==='on'?'ok':conn.state==='retry'?'bad':'');
+  $('conn').textContent=L(conn.want?'bDisconnect':'bConnect');
+}
+function connect(){
+  const user=$('tuser').value.trim().replace(/^@/,''),key=$('tkey').value.trim();
+  if(!user||!key){conn.want=false;setConn('off','needKey');return;}
+  cfg.user=user;cfg.key=key;save();conn.want=true;clearTimeout(conn.retry);
+  if(conn.ws){try{conn.ws.close();}catch(e){}}
+  let sock;
+  try{sock=new WebSocket('wss://api.tik.tools?uniqueId='+encodeURIComponent(user)+'&apiKey='+encodeURIComponent(key));}
+  catch(e){setConn('retry','connFail');conn.retry=setTimeout(connect,3000);return;}
+  conn.ws=sock;conn.events=0;setConn('retry','connecting');
+  sock.onopen=()=>{if(conn.ws===sock)setConn('on','connected');};
+  sock.onmessage=m=>{
+    if(conn.ws!==sock)return;
+    let e;try{e=JSON.parse(m.data);}catch(x){return;}
+    const t=e&&e.event,d=(e&&e.data)||{};
+    conn.events++;
+    if(conn.events===1||conn.events%10===0)setConn('on','received',conn.events,t);
+    if(t==='gift')onGift(d);
+    else if(t==='error')log('TikTool: '+JSON.stringify(d).slice(0,90));
+  };
+  sock.onerror=()=>{try{sock.close();}catch(e){}};
+  sock.onclose=ev=>{
+    if(conn.ws!==sock)return;
+    if(conn.want){setConn('retry','dropped',ev.code,ev.reason);conn.retry=setTimeout(connect,3000);}
+    else setConn('off','idle');
+  };
+}
+function disconnect(){
+  conn.want=false;clearTimeout(conn.retry);
+  const s=conn.ws;conn.ws=null;if(s){try{s.close();}catch(e){}}
+  setConn('off','idle');
+}
+$('conn').addEventListener('click',()=>{conn.want?disconnect():connect();});
+
+/* ---------- slot list ---------- */
+function renderSlots(){
+  const box=$('slots');box.textContent='';
+  cfg.slots.forEach((s,i)=>{
+    const el=document.createElement('div');el.className='slot';
+    const top=document.createElement('div');top.className='top';
+    const t=document.createElement('span');t.textContent=L('gift',i+1);top.appendChild(t);
+    const rm=document.createElement('button');rm.type='button';rm.className='sm';rm.textContent=L('bRemove');
+    rm.addEventListener('click',async()=>{
+      if(cfg.slots.length<=1)return;
+      await DB.del(s.id);delete clips[s.id];cfg.slots.splice(i,1);save();renderSlots();
+    });
+    top.appendChild(rm);el.appendChild(top);
+    const inp=document.createElement('input');inp.type='text';inp.value=s.name||'';inp.placeholder=L('phGift');
+    inp.setAttribute('autocomplete','off');inp.setAttribute('autocapitalize','off');
+    inp.addEventListener('input',()=>{s.name=inp.value;s.gid=null;save();});
+    el.appendChild(inp);
+    const row=document.createElement('div');row.className='row';
+    const ls=document.createElement('button');ls.type='button';ls.className='sm listen'+(learning===s.id?' on':'');
+    ls.textContent=L(learning===s.id?'bListening':'bListen');
+    ls.addEventListener('click',()=>{learning=learning===s.id?null:s.id;renderSlots();});
+    row.appendChild(ls);
+    const pick=document.createElement('label');pick.className='btn sm';
+    const ps=document.createElement('span');ps.textContent=L('bPick');pick.appendChild(ps);
+    const fi=document.createElement('input');fi.type='file';fi.accept='video/*';
+    fi.addEventListener('change',async()=>{
+      const f=fi.files&&fi.files[0];if(!f)return;
+      await DB.put(s.id,{name:f.name,blob:f});setClip(s.id,f);renderSlots();
+    });
+    pick.appendChild(fi);row.appendChild(pick);
+    const tb=document.createElement('button');tb.type='button';tb.className='sm';tb.textContent=L('bTest');
+    tb.addEventListener('click',()=>{
+      if(!started)startPlayback();
+      if(!clips[s.id]){log(L('noClip',i+1));return;}
+      enqueue(s.id,'Test',s.name||L('gift',i+1),1);
+    });
+    row.appendChild(tb);el.appendChild(row);
+    const fl=document.createElement('div');fl.className='file'+(clips[s.id]?' has':'');
+    fl.textContent=clips[s.id]?clips[s.id].name:L('noFile');el.appendChild(fl);
+    box.appendChild(el);
+  });
+}
+$('addSlot').addEventListener('click',()=>{
+  let n=cfg.slots.length+1;while(cfg.slots.some(s=>s.id==='s'+n))n++;
+  cfg.slots.push({id:'s'+n,name:'',gid:null});save();renderSlots();
+});
+
+/* ---------- idle video + options ---------- */
+$('idleFile').addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  await DB.put('idle',{name:f.name,blob:f});setClip('idle',f);renderIdle();applyIdle();
+});
+$('idleClear').addEventListener('click',async()=>{
+  await DB.del('idle');if(clips.idle){URL.revokeObjectURL(clips.idle.url);delete clips.idle;}
+  renderIdle();applyIdle();
+});
+function renderIdle(){const n=$('idleName');n.textContent=clips.idle?clips.idle.name:L('noFile');n.className='file'+(clips.idle?' has':'');}
+$('optIdleSound').addEventListener('change',e=>{cfg.idleSound=e.target.checked;save();applyIdle();});
+$('optFill').addEventListener('change',e=>{cfg.fill=e.target.checked;save();document.body.classList.toggle('fit',!cfg.fill);});
+
+/* ---------- live mode ---------- */
+let wake=null,fabT=null;
+async function keepAwake(){try{if(navigator.wakeLock&&document.visibilityState==='visible')wake=await navigator.wakeLock.request('screen');}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.body.classList.contains('live'))keepAwake();});
+$('live').addEventListener('click',()=>{startPlayback();document.body.classList.add('live');keepAwake();});
+$('stop').addEventListener('click',stopPlayback);
+$('exit').addEventListener('click',()=>{
+  document.body.classList.remove('live','showfab');
+  try{if(wake){wake.release();wake=null;}}catch(e){}
+});
+$('skip').addEventListener('click',()=>{if(playing)endClip();});
+$('stage').addEventListener('click',()=>{
+  if(!document.body.classList.contains('live'))return;
+  document.body.classList.add('showfab');clearTimeout(fabT);
+  fabT=setTimeout(()=>document.body.classList.remove('showfab'),4000);
+});
+
+/* ---------- language ---------- */
+function applyLang(){
+  document.documentElement.lang=LANG;document.title=L('title');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=L(el.dataset.i18n);});
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>{el.placeholder=L(el.dataset.i18nPh);});
+  $('lang').textContent=LANG==='en'?'ภาษาไทย':'English';
+  renderConn();renderIdle();renderSlots();
+}
+$('lang').addEventListener('click',()=>{LANG=LANG==='en'?'th':'en';save();applyLang();});
+
+/* ---------- start ---------- */
+$('tuser').value=cfg.user||'';$('tkey').value=cfg.key||'';
+$('optIdleSound').checked=!!cfg.idleSound;$('optFill').checked=cfg.fill!==false;
+document.body.classList.toggle('fit',cfg.fill===false);
+setConn('off','idle');applyLang();
+loadClips().then(()=>{renderIdle();renderSlots();applyIdle();log(L('ready'));});
+if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+window.GV={onGift,enqueue,get playing(){return playing;},get queue(){return queue.length;}};
+</script>
+</body>
+</html>
