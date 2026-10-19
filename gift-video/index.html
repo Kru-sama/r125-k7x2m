@@ -95,7 +95,7 @@ body.live .stage{position:fixed;inset:0;max-height:none;aspect-ratio:auto;border
     <h2 data-i18n="hOpt">Options</h2>
     <label class="chk"><input type="checkbox" id="optIdleSound"><span data-i18n="oIdleSound">Play sound from the looping video</span></label>
     <label class="chk"><input type="checkbox" id="optFill" checked><span data-i18n="oFill">Fill the screen (crop edges)</span></label>
-    <div class="row" style="margin-top:8px"><button class="pri" id="live" type="button" data-i18n="bLive">Start live mode</button><button id="stop" type="button" data-i18n="bStop">Stop playing</button></div>
+    <div class="row" style="margin-top:8px"><button class="pri" id="live" type="button" data-i18n="bLive">Start live mode</button><button id="stop" type="button" data-i18n="bStop">Stop playing</button><button id="full" type="button" data-i18n="bFull">Fullscreen</button></div>
     <p class="note" data-i18n="liveNote">Live mode hides the controls. Tap the screen to show Skip and Exit for 4 seconds. Keep this page open and the screen on.</p>
   </section>
 
@@ -105,6 +105,7 @@ body.live .stage{position:fixed;inset:0;max-height:none;aspect-ratio:auto;border
   </section>
 </div>
 
+<datalist id="gifts"><option value="GG"><option value="Heart"><option value="Heart Me"><option value="Ice Cream Cone"><option value="Love you"><option value="Rose"><option value="Thumbs Up"><option value="TikTok"><option value="Team Bracelet"><option value="Finger Heart"><option value="Cheer You Up"><option value="Friendship Necklace"><option value="Rosa"><option value="Perfume"><option value="Doughnut"><option value="Bubble Gum"><option value="Cap"><option value="Hat and Mustache"><option value="Level-up Sparks"><option value="Like-Pop"><option value="Little Crown"><option value="Love Painting"><option value="Paper Crane"><option value="Confetti"><option value="Marvelous Confetti"><option value="Cheer For You"><option value="Cheering Crab"><option value="Coffee Magic"><option value="Garland Headpiece"><option value="Hearts"><option value="Love You"><option value="Pinch Face"><option value="Butterfly for You"><option value="Corgi"><option value="Fruit Friends"><option value="Naughty Chicken"><option value="Play for You"><option value="Forever Rosa"><option value="Jollie the Joy Bean"><option value="Magic Rhythm"><option value="Relaxed Goose"><option value="Rocky the Rock Bean"><option value="Rosie the Rose Bean"><option value="Sage the Smart Bean"><option value="Tom's Hug"><option value="Beating Heart"><option value="Coral"><option value="Hands Up"><option value="DJ Glasses"><option value="Dragon Crown"><option value="Gem Gun"><option value="Money Gun"><option value="VR Goggles"><option value="You're Amazing"><option value="Swan"><option value="Train"><option value="Lucky Airdrop Box"><option value="Travel with You"><option value="Trending Figure"><option value="Galaxy"><option value="Shiny Air Balloon"><option value="Fireworks"></datalist>
 <script>
 'use strict';
 const I18N={
@@ -115,7 +116,7 @@ en:{title:'Gift Video Player',tag:'Loops a video. Each gift plays its own clip.'
  hIdle:'Looping video (plays all the time)',bPick:'Pick video',bClear:'Remove',noFile:'No video chosen',
  hSlots:'Gifts and their clips',slotNote:'Tap Listen, then send that gift once in your LIVE and the game remembers it. Or type the gift name exactly as TikTok shows it. One gift = one clip, played once, then the loop continues.',
  bAdd:'+ Add gift',gift:n=>'Gift '+n,phGift:'Gift name (e.g. Rose)',bListen:'Listen',bListening:'Send the gift…',bTest:'Test',bRemove:'Remove',
- hOpt:'Options',oIdleSound:'Play sound from the looping video',oFill:'Fill the screen (crop edges)',bLive:'Start live mode',bStop:'Stop playing',
+ hOpt:'Options',oIdleSound:'Play sound from the looping video',oFill:'Fill the screen (crop edges)',bLive:'Start live mode',bStop:'Stop playing',bFull:'Fullscreen',
  liveNote:'Live mode hides the controls. Tap the screen to show Skip and Exit for 4 seconds. Keep this page open and the screen on.',
  hLog:'Log',bSkip:'Skip clip',bExit:'Exit live mode',
  learned:(g,n)=>'Linked gift "'+g+'" to slot '+n,unmapped:g=>'Gift "'+g+'" has no clip yet',noClip:n=>'Slot '+n+' has no video yet',
@@ -127,7 +128,7 @@ th:{title:'เครื่องเล่นวิดีโอตามของ
  hIdle:'วิดีโอวนลูป (เล่นตลอด)',bPick:'เลือกวิดีโอ',bClear:'ลบ',noFile:'ยังไม่ได้เลือกวิดีโอ',
  hSlots:'ของขวัญและคลิปของมัน',slotNote:'กด "ฟัง" แล้วส่งของขวัญนั้นในไลฟ์ 1 ครั้ง ระบบจะจำให้ หรือพิมพ์ชื่อของขวัญตามที่ TikTok แสดง ของขวัญ 1 ชิ้น = 1 คลิป เล่นครั้งเดียวแล้วกลับไปวนลูป',
  bAdd:'+ เพิ่มของขวัญ',gift:n=>'ของขวัญ '+n,phGift:'ชื่อของขวัญ (เช่น Rose)',bListen:'ฟัง',bListening:'ส่งของขวัญเลย…',bTest:'ทดสอบ',bRemove:'ลบ',
- hOpt:'ตัวเลือก',oIdleSound:'เปิดเสียงจากวิดีโอวนลูป',oFill:'เต็มจอ (ตัดขอบ)',bLive:'เริ่มโหมดไลฟ์',bStop:'หยุดเล่น',
+ hOpt:'ตัวเลือก',oIdleSound:'เปิดเสียงจากวิดีโอวนลูป',oFill:'เต็มจอ (ตัดขอบ)',bLive:'เริ่มโหมดไลฟ์',bStop:'หยุดเล่น',bFull:'เต็มจอ',
  liveNote:'โหมดไลฟ์จะซ่อนปุ่ม แตะหน้าจอเพื่อแสดงปุ่มข้ามคลิปและออก 4 วินาที เปิดหน้านี้ค้างไว้และอย่าให้จอดับ',
  hLog:'บันทึก',bSkip:'ข้ามคลิป',bExit:'ออกจากโหมดไลฟ์',
  learned:(g,n)=>'ผูกของขวัญ "'+g+'" กับช่อง '+n,unmapped:g=>'ของขวัญ "'+g+'" ยังไม่มีคลิป',noClip:n=>'ช่อง '+n+' ยังไม่มีวิดีโอ',
@@ -299,7 +300,7 @@ function renderSlots(){
     });
     top.appendChild(rm);el.appendChild(top);
     const inp=document.createElement('input');inp.type='text';inp.value=s.name||'';inp.placeholder=L('phGift');
-    inp.setAttribute('autocomplete','off');inp.setAttribute('autocapitalize','off');
+    inp.setAttribute('autocomplete','off');inp.setAttribute('list','gifts');inp.setAttribute('autocapitalize','off');
     inp.addEventListener('input',()=>{s.name=inp.value;s.gid=null;save();});
     el.appendChild(inp);
     const row=document.createElement('div');row.className='row';
@@ -349,10 +350,13 @@ $('optFill').addEventListener('change',e=>{cfg.fill=e.target.checked;save();docu
 let wake=null,fabT=null;
 async function keepAwake(){try{if(navigator.wakeLock&&document.visibilityState==='visible')wake=await navigator.wakeLock.request('screen');}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.body.classList.contains('live'))keepAwake();});
-$('live').addEventListener('click',()=>{startPlayback();document.body.classList.add('live');keepAwake();});
+function goFull(){try{const r=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen({navigationUI:'hide'});if(r&&r.catch)r.catch(()=>{});}catch(e){}}
+function leaveFull(){try{if(document.fullscreenElement){const r=document.exitFullscreen();if(r&&r.catch)r.catch(()=>{});}}catch(e){}}
+$('live').addEventListener('click',()=>{startPlayback();document.body.classList.add('live');keepAwake();goFull();});
+$('full').addEventListener('click',()=>{document.fullscreenElement?leaveFull():goFull();});
 $('stop').addEventListener('click',stopPlayback);
 $('exit').addEventListener('click',()=>{
-  document.body.classList.remove('live','showfab');
+  document.body.classList.remove('live','showfab');leaveFull();
   try{if(wake){wake.release();wake=null;}}catch(e){}
 });
 $('skip').addEventListener('click',()=>{if(playing)endClip();});
