@@ -47,6 +47,14 @@ body.fit .stage video{object-fit:contain}
 body.live.showfab .fab{opacity:1;pointer-events:auto}
 body.live .fab{display:inline-flex}
 #exit{right:8px}#skip{left:8px}
+#dockBtn{left:8px;top:calc(max(8px,env(safe-area-inset-top)) + 52px)}
+#dock{position:fixed;right:max(6px,env(safe-area-inset-right));top:50%;transform:translateY(-50%);z-index:30;display:none;flex-direction:column;gap:8px;max-height:80vh;overflow:auto}
+body.live #dock.on{display:flex}
+#dock button{width:58px;min-height:58px;padding:4px 2px;border-radius:14px;background:rgba(8,22,30,.72);border:1px solid rgba(255,255,255,.18);color:#fff;flex-direction:column;gap:2px;font-size:10px;line-height:1.1;backdrop-filter:blur(4px)}
+#dock button:active{transform:scale(.94)}
+#dock img{width:36px;height:36px;object-fit:contain;display:block}
+#dock span{max-width:54px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thumb{width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:6px}
 body.live .ui{display:none!important}
 body.live .wrap{max-width:none;padding:0}
 body.live .stage{position:fixed;inset:0;max-height:none;aspect-ratio:auto;border:0;border-radius:0;margin:0;z-index:10}
@@ -54,7 +62,9 @@ body.live .stage{position:fixed;inset:0;max-height:none;aspect-ratio:auto;border
 </head>
 <body>
 <button id="skip" class="fab" type="button" data-i18n="bSkip">Skip clip</button>
+<button id="dockBtn" class="fab" type="button" data-i18n="bDock">Hide buttons</button>
 <button id="exit" class="fab" type="button" data-i18n="bExit">Exit live mode</button>
+<div id="dock"></div>
 <div class="wrap">
   <div class="head ui">
     <div><h1 data-i18n="title">Gift Video Player</h1><div class="sub" data-i18n="tag">Loops a video. Each gift plays its own clip.</div></div>
@@ -94,6 +104,7 @@ body.live .stage{position:fixed;inset:0;max-height:none;aspect-ratio:auto;border
   <section class="ui">
     <h2 data-i18n="hOpt">Options</h2>
     <label class="chk"><input type="checkbox" id="optIdleSound"><span data-i18n="oIdleSound">Play sound from the looping video</span></label>
+    <label class="chk"><input type="checkbox" id="optDock" checked><span data-i18n="oDock">Show gift buttons on the right side in live mode</span></label>
     <label class="chk"><input type="checkbox" id="optFill" checked><span data-i18n="oFill">Fill the screen (crop edges)</span></label>
     <div class="row" style="margin-top:8px"><button class="pri" id="live" type="button" data-i18n="bLive">Start live mode</button><button id="stop" type="button" data-i18n="bStop">Stop playing</button><button id="full" type="button" data-i18n="bFull">Fullscreen</button></div>
     <p class="note" data-i18n="liveNote">Live mode hides the controls. Tap the screen to show Skip and Exit for 4 seconds. Keep this page open and the screen on.</p>
@@ -105,6 +116,7 @@ body.live .stage{position:fixed;inset:0;max-height:none;aspect-ratio:auto;border
   </section>
 </div>
 
+<script src="gift-icons.js"></script>
 <datalist id="gifts"><option value="GG"><option value="Heart"><option value="Heart Me"><option value="Ice Cream Cone"><option value="Love you"><option value="Rose"><option value="Thumbs Up"><option value="TikTok"><option value="Team Bracelet"><option value="Finger Heart"><option value="Cheer You Up"><option value="Friendship Necklace"><option value="Rosa"><option value="Perfume"><option value="Doughnut"><option value="Bubble Gum"><option value="Cap"><option value="Hat and Mustache"><option value="Level-up Sparks"><option value="Like-Pop"><option value="Little Crown"><option value="Love Painting"><option value="Paper Crane"><option value="Confetti"><option value="Marvelous Confetti"><option value="Cheer For You"><option value="Cheering Crab"><option value="Coffee Magic"><option value="Garland Headpiece"><option value="Hearts"><option value="Love You"><option value="Pinch Face"><option value="Butterfly for You"><option value="Corgi"><option value="Fruit Friends"><option value="Naughty Chicken"><option value="Play for You"><option value="Forever Rosa"><option value="Jollie the Joy Bean"><option value="Magic Rhythm"><option value="Relaxed Goose"><option value="Rocky the Rock Bean"><option value="Rosie the Rose Bean"><option value="Sage the Smart Bean"><option value="Tom's Hug"><option value="Beating Heart"><option value="Coral"><option value="Hands Up"><option value="DJ Glasses"><option value="Dragon Crown"><option value="Gem Gun"><option value="Money Gun"><option value="VR Goggles"><option value="You're Amazing"><option value="Swan"><option value="Train"><option value="Lucky Airdrop Box"><option value="Travel with You"><option value="Trending Figure"><option value="Galaxy"><option value="Shiny Air Balloon"><option value="Fireworks"></datalist>
 <script>
 'use strict';
@@ -112,30 +124,30 @@ const I18N={
 en:{title:'Gift Video Player',tag:'Loops a video. Each gift plays its own clip.',ph:'Pick a looping video below',
  hLive:'Connect to TikTok LIVE',phUser:'Your TikTok username (no @)',phKey:'TikTool API key',bConnect:'Connect',bDisconnect:'Disconnect',
  idle:'Not connected',needKey:'Enter your username and API key',connecting:'Connecting…',connected:'Connected. Waiting for events…',
- received:(n,t)=>'Connected. '+n+' events received (last: '+t+')',dropped:(c,r)=>'Dropped ('+c+' '+(r||'')+'). Reconnecting…',connFail:'Could not open the connection. Retrying…',
+ received:(n,t)=>'Connected. '+n+' events received (last: '+t+')',dropped:(c,d)=>'Disconnected (code '+c+'). Retrying in '+d+' s…',rateLimit:'Stopped: TikTool says too many connections (limit reached). Wait, then press Connect again. Start your LIVE first.',authFail:'Stopped: TikTool refused the key. Check your API key and username.',connFail:'Could not open the connection. Retrying…',
  hIdle:'Looping video (plays all the time)',bPick:'Pick video',bClear:'Remove',noFile:'No video chosen',
  hSlots:'Gifts and their clips',slotNote:'Tap Listen, then send that gift once in your LIVE and the game remembers it. Or type the gift name exactly as TikTok shows it. One gift = one clip, played once, then the loop continues.',
  bAdd:'+ Add gift',gift:n=>'Gift '+n,phGift:'Gift name (e.g. Rose)',bListen:'Listen',bListening:'Send the gift…',bTest:'Test',bRemove:'Remove',
  hOpt:'Options',oIdleSound:'Play sound from the looping video',oFill:'Fill the screen (crop edges)',bLive:'Start live mode',bStop:'Stop playing',bFull:'Fullscreen',
  liveNote:'Live mode hides the controls. Tap the screen to show Skip and Exit for 4 seconds. Keep this page open and the screen on.',
- hLog:'Log',bSkip:'Skip clip',bExit:'Exit live mode',
- learned:(g,n)=>'Linked gift "'+g+'" to slot '+n,unmapped:g=>'Gift "'+g+'" has no clip yet',noClip:n=>'Slot '+n+' has no video yet',
+ hLog:'Log',bSkip:'Skip clip',bExit:'Exit live mode',bDock:'Hide buttons',bDockShow:'Show buttons',bImg:'Pick image',oDock:'Show gift buttons on the right side in live mode',
+ you:'You',learned:(g,n)=>'Linked gift "'+g+'" to slot '+n,unmapped:g=>'Gift "'+g+'" has no clip yet',noClip:n=>'Slot '+n+' has no video yet',
  queued:(w,g,n)=>w+' · '+g+(n>1?' ×'+n:''),dropQ:n=>n+' clip(s) skipped because the queue is full',ready:'Ready',stopped:'Stopped'},
 th:{title:'เครื่องเล่นวิดีโอตามของขวัญ',tag:'เล่นวิดีโอวนลูป พอมีของขวัญก็เล่นคลิปของของขวัญนั้น',ph:'เลือกวิดีโอวนลูปด้านล่าง',
  hLive:'เชื่อมต่อ TikTok LIVE',phUser:'ชื่อ TikTok ของคุณ (ไม่ต้องใส่ @)',phKey:'API key ของ TikTool',bConnect:'เชื่อมต่อ',bDisconnect:'ตัดการเชื่อมต่อ',
  idle:'ยังไม่ได้เชื่อมต่อ',needKey:'ใส่ชื่อผู้ใช้และ API key ก่อน',connecting:'กำลังเชื่อมต่อ…',connected:'เชื่อมต่อแล้ว รอข้อมูล…',
- received:(n,t)=>'เชื่อมต่อแล้ว รับข้อมูล '+n+' รายการ (ล่าสุด: '+t+')',dropped:(c,r)=>'หลุด ('+c+' '+(r||'')+') กำลังต่อใหม่…',connFail:'เปิดการเชื่อมต่อไม่ได้ กำลังลองใหม่…',
+ received:(n,t)=>'เชื่อมต่อแล้ว รับข้อมูล '+n+' รายการ (ล่าสุด: '+t+')',dropped:(c,d)=>'หลุด (รหัส '+c+') ลองใหม่ใน '+d+' วินาที…',rateLimit:'หยุดแล้ว: TikTool แจ้งเชื่อมต่อถี่เกินโควตา รอสักพักแล้วกด Connect ใหม่ และเริ่มไลฟ์ก่อน',authFail:'หยุดแล้ว: TikTool ไม่รับ API key ตรวจรหัสและชื่อผู้ใช้อีกครั้ง',connFail:'เปิดการเชื่อมต่อไม่ได้ กำลังลองใหม่…',
  hIdle:'วิดีโอวนลูป (เล่นตลอด)',bPick:'เลือกวิดีโอ',bClear:'ลบ',noFile:'ยังไม่ได้เลือกวิดีโอ',
  hSlots:'ของขวัญและคลิปของมัน',slotNote:'กด "ฟัง" แล้วส่งของขวัญนั้นในไลฟ์ 1 ครั้ง ระบบจะจำให้ หรือพิมพ์ชื่อของขวัญตามที่ TikTok แสดง ของขวัญ 1 ชิ้น = 1 คลิป เล่นครั้งเดียวแล้วกลับไปวนลูป',
  bAdd:'+ เพิ่มของขวัญ',gift:n=>'ของขวัญ '+n,phGift:'ชื่อของขวัญ (เช่น Rose)',bListen:'ฟัง',bListening:'ส่งของขวัญเลย…',bTest:'ทดสอบ',bRemove:'ลบ',
  hOpt:'ตัวเลือก',oIdleSound:'เปิดเสียงจากวิดีโอวนลูป',oFill:'เต็มจอ (ตัดขอบ)',bLive:'เริ่มโหมดไลฟ์',bStop:'หยุดเล่น',bFull:'เต็มจอ',
  liveNote:'โหมดไลฟ์จะซ่อนปุ่ม แตะหน้าจอเพื่อแสดงปุ่มข้ามคลิปและออก 4 วินาที เปิดหน้านี้ค้างไว้และอย่าให้จอดับ',
- hLog:'บันทึก',bSkip:'ข้ามคลิป',bExit:'ออกจากโหมดไลฟ์',
- learned:(g,n)=>'ผูกของขวัญ "'+g+'" กับช่อง '+n,unmapped:g=>'ของขวัญ "'+g+'" ยังไม่มีคลิป',noClip:n=>'ช่อง '+n+' ยังไม่มีวิดีโอ',
+ hLog:'บันทึก',bSkip:'ข้ามคลิป',bExit:'ออกจากโหมดไลฟ์',bDock:'ซ่อนปุ่ม',bDockShow:'แสดงปุ่ม',bImg:'เลือกรูป',oDock:'แสดงปุ่มของขวัญด้านขวาในโหมดไลฟ์',
+ you:'คุณ',learned:(g,n)=>'ผูกของขวัญ "'+g+'" กับช่อง '+n,unmapped:g=>'ของขวัญ "'+g+'" ยังไม่มีคลิป',noClip:n=>'ช่อง '+n+' ยังไม่มีวิดีโอ',
  queued:(w,g,n)=>w+' · '+g+(n>1?' ×'+n:''),dropQ:n=>'ข้าม '+n+' คลิป เพราะคิวเต็ม',ready:'พร้อม',stopped:'หยุดแล้ว'}
 };
 const KEY='giftvideo.cfg.v1';
-let cfg={user:'',key:'',lang:'en',idleSound:false,fill:true,slots:[]};
+let cfg={user:'',key:'',lang:'en',idleSound:false,fill:true,dock:true,slots:[]};
 try{Object.assign(cfg,JSON.parse(localStorage.getItem(KEY)||'{}'));}catch(e){}
 if(!Array.isArray(cfg.slots)||!cfg.slots.length)cfg.slots=Array.from({length:6},(_,i)=>({id:'s'+(i+1),name:'',gid:null}));
 let LANG=cfg.lang==='th'?'th':'en';
@@ -157,8 +169,12 @@ function setClip(k,file){
   if(clips[k]&&clips[k].url)URL.revokeObjectURL(clips[k].url);
   clips[k]={name:file.name||'video',url:URL.createObjectURL(file)};
 }
+const imgs={};   // slot id -> custom image url
+const normName=n=>String(n||'').trim().toLowerCase().replace(/\s+/g,' ');
+function iconFor(s){return imgs[s.id]||(window.GIFT_ICONS&&window.GIFT_ICONS[normName(s.name)])||null;}
 async function loadClips(){
   await DB.open();
+  for(const s of cfg.slots){const r=await DB.get('img_'+s.id);if(r&&r.blob)imgs[s.id]=URL.createObjectURL(r.blob);}
   for(const k of ['idle',...cfg.slots.map(s=>s.id)]){
     const r=await DB.get(k);if(r&&r.blob)setClip(k,r.blob.name?r.blob:new File([r.blob],r.name||'video',{type:r.blob.type}));
     if(r&&r.name&&clips[k])clips[k].name=r.name;
@@ -246,7 +262,7 @@ function onGift(d){
 }
 
 /* ---------- live connection (TikTool WebSocket) ---------- */
-const conn={ws:null,want:false,retry:null,state:'off',events:0,key:'idle',args:[]};
+const conn={ws:null,want:false,retry:null,fails:0,state:'off',events:0,key:'idle',args:[]};
 function setConn(s,key,...args){conn.state=s;conn.key=key;conn.args=args;renderConn();}
 function renderConn(){
   $('cstat').textContent=L(conn.key||'idle',...(conn.args||[]));
@@ -267,7 +283,7 @@ function connect(){
     if(conn.ws!==sock)return;
     let e;try{e=JSON.parse(m.data);}catch(x){return;}
     const t=e&&e.event,d=(e&&e.data)||{};
-    conn.events++;
+    conn.events++;conn.fails=0;
     if(conn.events===1||conn.events%10===0)setConn('on','received',conn.events,t);
     if(t==='gift')onGift(d);
     else if(t==='error')log('TikTool: '+JSON.stringify(d).slice(0,90));
@@ -275,7 +291,8 @@ function connect(){
   sock.onerror=()=>{try{sock.close();}catch(e){}};
   sock.onclose=ev=>{
     if(conn.ws!==sock)return;
-    if(conn.want){setConn('retry','dropped',ev.code,ev.reason);conn.retry=setTimeout(connect,3000);}
+    if(ev.code===4429||ev.code===4401||ev.code===4403){conn.want=false;setConn('off',ev.code===4429?'rateLimit':'authFail');return;}
+    if(conn.want){const d=Math.min(60000,3000*Math.pow(2,conn.fails++));setConn('retry','dropped',ev.code,Math.round(d/1000));conn.retry=setTimeout(connect,d);}
     else setConn('off','idle');
   };
 }
@@ -292,16 +309,17 @@ function renderSlots(){
   cfg.slots.forEach((s,i)=>{
     const el=document.createElement('div');el.className='slot';
     const top=document.createElement('div');top.className='top';
-    const t=document.createElement('span');t.textContent=L('gift',i+1);top.appendChild(t);
+    const t=document.createElement('span');const ic0=iconFor(s);if(ic0){const th=document.createElement('img');th.className='thumb';th.src=ic0;th.alt='';t.appendChild(th);}t.appendChild(document.createTextNode(L('gift',i+1)));top.appendChild(t);
     const rm=document.createElement('button');rm.type='button';rm.className='sm';rm.textContent=L('bRemove');
     rm.addEventListener('click',async()=>{
       if(cfg.slots.length<=1)return;
-      await DB.del(s.id);delete clips[s.id];cfg.slots.splice(i,1);save();renderSlots();
+      await DB.del(s.id);await DB.del('img_'+s.id);delete clips[s.id];delete imgs[s.id];cfg.slots.splice(i,1);save();renderSlots();
     });
     top.appendChild(rm);el.appendChild(top);
     const inp=document.createElement('input');inp.type='text';inp.value=s.name||'';inp.placeholder=L('phGift');
     inp.setAttribute('autocomplete','off');inp.setAttribute('list','gifts');inp.setAttribute('autocapitalize','off');
     inp.addEventListener('input',()=>{s.name=inp.value;s.gid=null;save();});
+    inp.addEventListener('change',()=>renderSlots());
     el.appendChild(inp);
     const row=document.createElement('div');row.className='row';
     const ls=document.createElement('button');ls.type='button';ls.className='sm listen'+(learning===s.id?' on':'');
@@ -316,6 +334,14 @@ function renderSlots(){
       await DB.put(s.id,{name:f.name,blob:f});setClip(s.id,f);renderSlots();
     });
     pick.appendChild(fi);row.appendChild(pick);
+    const pi=document.createElement('label');pi.className='btn sm';
+    const pis=document.createElement('span');pis.textContent=L('bImg');pi.appendChild(pis);
+    const ifl=document.createElement('input');ifl.type='file';ifl.accept='image/*';
+    ifl.addEventListener('change',async()=>{
+      const f=ifl.files&&ifl.files[0];if(!f)return;
+      await DB.put('img_'+s.id,{blob:f});if(imgs[s.id])URL.revokeObjectURL(imgs[s.id]);imgs[s.id]=URL.createObjectURL(f);renderSlots();
+    });
+    pi.appendChild(ifl);row.appendChild(pi);
     const tb=document.createElement('button');tb.type='button';tb.className='sm';tb.textContent=L('bTest');
     tb.addEventListener('click',()=>{
       if(!started)startPlayback();
@@ -327,6 +353,7 @@ function renderSlots(){
     fl.textContent=clips[s.id]?clips[s.id].name:L('noFile');el.appendChild(fl);
     box.appendChild(el);
   });
+  renderDock();
 }
 $('addSlot').addEventListener('click',()=>{
   let n=cfg.slots.length+1;while(cfg.slots.some(s=>s.id==='s'+n))n++;
@@ -344,6 +371,7 @@ $('idleClear').addEventListener('click',async()=>{
 });
 function renderIdle(){const n=$('idleName');n.textContent=clips.idle?clips.idle.name:L('noFile');n.className='file'+(clips.idle?' has':'');}
 $('optIdleSound').addEventListener('change',e=>{cfg.idleSound=e.target.checked;save();applyIdle();});
+$('optDock').addEventListener('change',e=>{cfg.dock=e.target.checked;save();renderDock();});
 $('optFill').addEventListener('change',e=>{cfg.fill=e.target.checked;save();document.body.classList.toggle('fit',!cfg.fill);});
 
 /* ---------- live mode ---------- */
@@ -360,6 +388,23 @@ $('exit').addEventListener('click',()=>{
   try{if(wake){wake.release();wake=null;}}catch(e){}
 });
 $('skip').addEventListener('click',()=>{if(playing)endClip();});
+function renderDock(){
+  const d=$('dock');d.textContent='';
+  cfg.slots.forEach((s,i)=>{
+    if(!clips[s.id])return;
+    const b=document.createElement('button');b.type='button';
+    const nm=s.name||L('gift',i+1),ic=iconFor(s);
+    if(ic){const im=document.createElement('img');im.src=ic;im.alt='';b.appendChild(im);}
+    const sp=document.createElement('span');sp.textContent=nm;b.appendChild(sp);
+    b.setAttribute('aria-label',nm);
+    b.addEventListener('click',e=>{e.stopPropagation();enqueue(s.id,L('you'),nm,1);});
+    d.appendChild(b);
+  });
+  d.classList.toggle('on',cfg.dock!==false&&d.children.length>0);
+  $('dockBtn').textContent=L(cfg.dock!==false?'bDock':'bDockShow');
+}
+$('dockBtn').addEventListener('click',e=>{e.stopPropagation();cfg.dock=cfg.dock===false;save();renderDock();$('optDock').checked=cfg.dock!==false;});
+$('dock').addEventListener('click',e=>e.stopPropagation());
 $('stage').addEventListener('click',()=>{
   if(!document.body.classList.contains('live'))return;
   document.body.classList.add('showfab');clearTimeout(fabT);
@@ -378,7 +423,7 @@ $('lang').addEventListener('click',()=>{LANG=LANG==='en'?'th':'en';save();applyL
 
 /* ---------- start ---------- */
 $('tuser').value=cfg.user||'';$('tkey').value=cfg.key||'';
-$('optIdleSound').checked=!!cfg.idleSound;$('optFill').checked=cfg.fill!==false;
+$('optIdleSound').checked=!!cfg.idleSound;$('optDock').checked=cfg.dock!==false;$('optFill').checked=cfg.fill!==false;
 document.body.classList.toggle('fit',cfg.fill===false);
 setConn('off','idle');applyLang();
 loadClips().then(()=>{renderIdle();renderSlots();applyIdle();log(L('ready'));});
