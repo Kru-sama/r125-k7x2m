@@ -1,11 +1,11 @@
 {
-  "name": "Gift Video Player",
-  "short_name": "Gift Video",
+  "name": "Long Boat Flag Race",
+  "short_name": "Long Boat",
+  "description": "TikTok LIVE boat race: viewers send gifts to push their country's boat to the finish.",
   "lang": "en",
-  "description": "TikTok LIVE: loops a video and plays a chosen clip for each gift.",
   "start_url": "./",
   "scope": "./",
-  "display": "fullscreen",
+  "display": "standalone",
   "orientation": "portrait",
   "background_color": "#08161e",
   "theme_color": "#08161e",
@@ -22,9 +22,5 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "display_override": [
-    "fullscreen",
-    "standalone"
   ]
 }

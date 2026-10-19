@@ -1,6 +1,6 @@
 // Keeps the game openable without a connection. Network first, so a newly uploaded version is picked up
 // as soon as the phone is online; the saved copy is only used when the network fails.
-const CACHE='gift-video-v2';
+const CACHE='boat-race-v1';
 const FILES=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()));

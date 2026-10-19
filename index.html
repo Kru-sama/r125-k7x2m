@@ -3,260 +3,554 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#08161e">
+<title>Long Boat Flag Race</title>
 <link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#08161e">
+<link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>Gift Video Player</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500&family=Sarabun:wght@400;500;700&display=swap">
 <style>
-:root{--bg:#08161e;--panel:#0f2230;--line:#1d3a4b;--fg:#e8f1f5;--mut:#8aa3ad;--acc:#ffb020;--ok:#5fd38a;--bad:#ff8a7a}
+/* Layout: one phone-width column. Race canvas on top, then live connection, gift mapping, test tools, standings, feed. "โหมดไลฟ์" hides everything except the canvas. Night-river palette, lantern gold accent. */
+:root{
+  --bg:#08161e;
+  --panel:#0f2531;
+  --line:#1d3b4a;
+  --fg:#e7f0f1;
+  --muted:#8aa3ad;
+  --accent:#ffb43a;
+  --accent-ink:#2a1a00;
+  --ok:#5fd38a;
+  --bad:#ff8a7a;
+  --font-display:'Mitr','Sarabun',system-ui,sans-serif;
+  --font-body:'Sarabun',system-ui,sans-serif;
+  color-scheme:dark;
+}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
-.wrap{max-width:560px;margin:0 auto;padding:16px}
-h1{font-size:20px;margin:0 0 2px}
-.sub{color:var(--mut);font-size:13px}
-.sub.ok{color:var(--ok)}.sub.bad{color:var(--bad)}
-.head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
-section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
-h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:0 0 10px;font-weight:600}
-input[type=text],input[type=password]{width:100%;min-height:44px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:#0a1a24;color:var(--fg);font:inherit;margin-bottom:8px}
-button,.btn{min-height:44px;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:#12303f;color:var(--fg);font:inherit;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-align:center}
-button.pri{background:var(--acc);color:#1b1200;border-color:var(--acc);font-weight:700}
-button.sm,.btn.sm{min-height:40px;padding:6px 10px;font-size:13px}
-button[aria-pressed=true]{border-color:var(--acc);color:var(--acc)}
-button.listen.on{background:var(--acc);color:#1b1200;border-color:var(--acc)}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.slot{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px;background:#0a1a24}
-.slot .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-weight:600}
-.file{color:var(--mut);font-size:12px;word-break:break-all;margin-top:6px}
-.file.has{color:var(--ok)}
-input[type=file]{display:none}
-.note{color:var(--mut);font-size:13px}
-label.chk{display:flex;gap:10px;align-items:center;min-height:44px}
-label.chk input{width:22px;height:22px}
-/* stage */
-.stage{position:relative;background:#000;border:1px solid var(--line);border-radius:14px;overflow:hidden;aspect-ratio:9/16;max-height:52vh;margin:0 auto}
-.stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
-body.fit .stage video{object-fit:contain}
-#vClip{opacity:0;pointer-events:none}
-#vClip.on{opacity:1}
-.ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--mut);font-size:14px}
-#toast{position:absolute;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));text-align:center;font-weight:700;text-shadow:0 2px 6px #000;opacity:0;transition:opacity .25s;pointer-events:none}
-#toast.on{opacity:1}
-.fab{position:fixed;z-index:20;top:max(8px,env(safe-area-inset-top));display:none;opacity:0;pointer-events:none;transition:opacity .25s;background:rgba(8,22,30,.85)}
+html{background:var(--bg)}
+body{
+  margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.45;
+  padding-block:calc(12px + env(safe-area-inset-top,0px)) calc(28px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+h1{font-family:var(--font-display);font-weight:500;font-size:22px;margin:0;text-wrap:balance}
+.sub{color:var(--muted);font-size:13px}
+.sub.ok{color:var(--ok)}
+.sub.bad{color:var(--bad)}
+canvas#race{width:100%;aspect-ratio:360/500;display:block;border-radius:10px;border:1px solid var(--line);background:#0b2a3a}
+h2{font-family:var(--font-display);font-weight:400;font-size:13px;letter-spacing:.06em;color:var(--muted);margin:0 0 8px}
+.teams{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.team{
+  display:flex;align-items:center;gap:8px;min-height:44px;padding:6px 10px;min-width:0;
+  background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;font:inherit;font-size:14px;cursor:pointer;
+}
+.team canvas{width:26px;height:17px;flex:none}
+.team span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.team[aria-pressed="true"]{border-color:var(--accent);background:#1a2f36;box-shadow:0 0 0 1px var(--accent) inset}
+.gifts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.gift{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:84px;padding:8px 6px;min-width:0;
+  background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;font:inherit;font-weight:700;cursor:pointer;
+}
+.gift canvas{width:30px;height:30px}
+.gift span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.gift small{font-weight:500;font-size:11px;color:var(--accent)}
+.gift:active{border-color:var(--accent);transform:translateY(1px)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.tools{display:flex;flex-wrap:wrap;gap:8px}
+.tool{min-height:44px;padding:8px 14px;background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:8px;font:inherit;cursor:pointer}
+.tool[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.row{display:flex;gap:8px}
+input[type=text],input[type=password]{flex:1;min-width:0;min-height:44px;padding:8px 12px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;font:inherit}
+input#vname{flex:0 0 7.5em}
+input::placeholder{color:var(--muted)}
+ul#feed{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-height:4.4em}
+ul#feed li:first-child{color:var(--fg)}
+.board{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.brow{display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 10px;background:var(--panel);font-size:13px}
+.brow+.brow{border-top:1px solid var(--line)}
+.brow canvas{width:26px;height:17px}
+.brow .n{font-weight:700;white-space:nowrap}
+.brow .s{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.brow .w{color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mrow{display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:10px;padding:6px 10px;background:var(--panel);font-size:13px}
+.mrow+.mrow{border-top:1px solid var(--line)}
+.mrow canvas{width:26px;height:17px}
+.mrow input{min-height:40px;padding:6px 10px}
+.mrow .tool{min-height:40px;padding:6px 12px}
+.note{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;margin:0}
+.note code{font-family:ui-monospace,Menlo,monospace;color:var(--fg)}
+.fab{display:none;position:fixed;z-index:5;top:calc(env(safe-area-inset-top,0px) + 8px);
+  min-height:36px;padding:4px 12px;border-radius:18px;border:1px solid var(--line);background:rgba(8,22,30,.85);color:var(--fg);font:inherit;font-size:12px;cursor:pointer;
+  opacity:0;pointer-events:none;transition:opacity .25s}
 body.live.showfab .fab{opacity:1;pointer-events:auto}
-body.live .fab{display:inline-flex}
-#exit{right:8px}#skip{left:8px}
+#exit{right:max(8px,env(safe-area-inset-right,0px))}
+#sndlive{left:max(8px,env(safe-area-inset-left,0px))}
+#muslive{left:max(8px,env(safe-area-inset-left,0px));top:48px}
 body.live .ui{display:none!important}
-body.live .wrap{max-width:none;padding:0}
-body.live .stage{position:fixed;inset:0;max-height:none;aspect-ratio:auto;border:0;border-radius:0;margin:0;z-index:10}
+body.live .fab{display:block}
+body.live .wrap{max-width:560px}
+@media (prefers-reduced-motion:reduce){.gift:active{transform:none}}
 </style>
 </head>
 <body>
-<button id="skip" class="fab" type="button" data-i18n="bSkip">Skip clip</button>
+
+<button id="sndlive" class="fab" type="button">Sound: Off</button>
+<button id="muslive" class="fab" type="button">Music: Off</button>
 <button id="exit" class="fab" type="button" data-i18n="bExit">Exit live mode</button>
+
 <div class="wrap">
-  <div class="head ui">
-    <div><h1 data-i18n="title">Gift Video Player</h1><div class="sub" data-i18n="tag">Loops a video. Each gift plays its own clip.</div></div>
-    <button class="sm" id="lang" type="button">ภาษาไทย</button>
-  </div>
+  <header class="ui">
+    <h1 data-i18n="title">Long Boat Flag Race</h1>
+    <span class="sub" data-i18n="sub">First country to receive 1,000 gifts wins</span>
+  </header>
 
-  <div class="stage" id="stage">
-    <video id="vIdle" playsinline loop muted></video>
-    <video id="vClip" playsinline></video>
-    <div class="ph" id="ph" data-i18n="ph">Pick a looping video below</div>
-    <div id="toast"></div>
-  </div>
+  <canvas id="race" aria-label="Race track with 6 teams" data-i18n-aria="ariaCanvas"></canvas>
 
   <section class="ui">
-    <h2 data-i18n="hLive">Connect to TikTok LIVE</h2>
-    <input type="text" id="tuser" data-i18n-ph="phUser" autocomplete="off" autocapitalize="off">
-    <input type="password" id="tkey" data-i18n-ph="phKey" autocomplete="off">
-    <div class="row"><button id="conn" type="button" class="pri">Connect</button><span id="cstat" class="sub"></span></div>
-  </section>
-
-  <section class="ui">
-    <h2 data-i18n="hIdle">Looping video (plays all the time)</h2>
-    <div class="row">
-      <label class="btn sm"><span data-i18n="bPick">Pick video</span><input type="file" id="idleFile" accept="video/*"></label>
-      <button class="sm" id="idleClear" type="button" data-i18n="bClear">Remove</button>
+    <h2 data-i18n="hConn">Connect to TikTok LIVE</h2>
+    <div class="row" style="margin-bottom:8px">
+      <input type="text" id="tuser" placeholder="Your TikTok username (no @)" data-i18n-ph="phUser" autocomplete="off" autocapitalize="off" spellcheck="false">
     </div>
-    <div class="file" id="idleName"></div>
+    <div class="row" style="margin-bottom:8px">
+      <input type="password" id="tkey" placeholder="TikTool API key" data-i18n-ph="phKey" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="row">
+      <button class="tool" id="conn" type="button">Connect</button>
+      <span class="sub" id="cstat" style="align-self:center;min-width:0">Not connected</span>
+    </div>
   </section>
 
   <section class="ui">
-    <h2 data-i18n="hSlots">Gifts and their clips</h2>
-    <p class="note" data-i18n="slotNote">Tap Listen, then send that gift once in your LIVE and the game remembers it. Or type the gift name exactly as TikTok shows it. One gift = one clip, played once, then the loop continues.</p>
-    <div id="slots"></div>
-    <button id="addSlot" class="sm" type="button" data-i18n="bAdd">+ Add gift</button>
+    <h2 data-i18n="hMap">Link gifts to countries</h2>
+    <div class="board" id="map"></div>
+    <p class="sub" style="margin:8px 0 0" data-i18n="mapHint">Tap "Listen", then send that gift once in your LIVE. The game remembers it for that country. Or type the gift name exactly as TikTok shows it (for example Rose or GG). One gift per country.</p>
   </section>
 
   <section class="ui">
-    <h2 data-i18n="hOpt">Options</h2>
-    <label class="chk"><input type="checkbox" id="optIdleSound"><span data-i18n="oIdleSound">Play sound from the looping video</span></label>
-    <label class="chk"><input type="checkbox" id="optFill" checked><span data-i18n="oFill">Fill the screen (crop edges)</span></label>
-    <div class="row" style="margin-top:8px"><button class="pri" id="live" type="button" data-i18n="bLive">Start live mode</button><button id="stop" type="button" data-i18n="bStop">Stop playing</button><button id="full" type="button" data-i18n="bFull">Fullscreen</button></div>
-    <p class="note" data-i18n="liveNote">Live mode hides the controls. Tap the screen to show Skip and Exit for 4 seconds. Keep this page open and the screen on.</p>
+    <h2 data-i18n="hTest">Test without going live: viewer name and team</h2>
+    <div class="row" style="margin-bottom:8px">
+      <input type="text" id="vname" value="Me" aria-label="Test viewer name" data-i18n-aria="ariaVname" autocomplete="off">
+      <span class="sub" style="align-self:center" data-i18n="tapFlag">Tap a flag to join a team</span>
+    </div>
+    <div class="teams" id="teams"></div>
   </section>
 
   <section class="ui">
-    <h2 data-i18n="hLog">Log</h2>
-    <div id="log" class="note" style="max-height:150px;overflow:auto"></div>
+    <h2 data-i18n="hGifts">Send test gifts (1 gift per country)</h2>
+    <div class="row" id="qty" style="margin-bottom:8px" role="group" aria-label="Pieces per tap" data-i18n-aria="ariaQty"></div>
+    <div class="gifts" id="gifts"></div>
   </section>
+
+  <section class="ui">
+    <h2 data-i18n="hCmt">Test comment</h2>
+    <form id="cform" class="row">
+      <input type="text" id="cin" placeholder="Type a country, e.g. Thailand or Vietnam" data-i18n-ph="phCmt" autocomplete="off">
+      <button class="tool" type="submit" data-i18n="bSend">Send</button>
+    </form>
+  </section>
+
+  <section class="ui">
+    <h2 data-i18n="hBoard">Gift standings</h2>
+    <div class="board" id="board"></div>
+  </section>
+
+  <div class="tools ui">
+    <button class="tool" id="snd" type="button" aria-pressed="false">Sound: Off</button>
+    <button class="tool" id="mus" type="button" aria-pressed="false">Music: Off</button>
+    <button class="tool" id="live" type="button" data-i18n="bLive">Live mode</button>
+    <button class="tool" id="reset" type="button" data-i18n="bReset">Restart race</button>
+    <button class="tool" id="auto" type="button" aria-pressed="false">Simulate viewers: Off</button>
+    <button class="tool" id="lang" type="button">ภาษาไทย</button>
+  </div>
+
+  <ul id="feed" class="ui" aria-live="polite"></ul>
+
+  <p class="note ui" data-i18n="note">The track is 2,000 m and the camera follows the leader. 1 gift = 2 m, so 1,000 gifts reach the finish. Every boat also drifts forward slowly at the same speed, but drifting alone never reaches the finish line. Likes and comments do not move boats. Viewers join a team by commenting a country name, and their likes then add effects to their own team's boat. When a team wins, the result shows for 8 seconds and a new round starts. All sounds are generated in the page: tap Sound once to turn them on.</p>
 </div>
 
-<datalist id="gifts"><option value="GG"><option value="Heart"><option value="Heart Me"><option value="Ice Cream Cone"><option value="Love you"><option value="Rose"><option value="Thumbs Up"><option value="TikTok"><option value="Team Bracelet"><option value="Finger Heart"><option value="Cheer You Up"><option value="Friendship Necklace"><option value="Rosa"><option value="Perfume"><option value="Doughnut"><option value="Bubble Gum"><option value="Cap"><option value="Hat and Mustache"><option value="Level-up Sparks"><option value="Like-Pop"><option value="Little Crown"><option value="Love Painting"><option value="Paper Crane"><option value="Confetti"><option value="Marvelous Confetti"><option value="Cheer For You"><option value="Cheering Crab"><option value="Coffee Magic"><option value="Garland Headpiece"><option value="Hearts"><option value="Love You"><option value="Pinch Face"><option value="Butterfly for You"><option value="Corgi"><option value="Fruit Friends"><option value="Naughty Chicken"><option value="Play for You"><option value="Forever Rosa"><option value="Jollie the Joy Bean"><option value="Magic Rhythm"><option value="Relaxed Goose"><option value="Rocky the Rock Bean"><option value="Rosie the Rose Bean"><option value="Sage the Smart Bean"><option value="Tom's Hug"><option value="Beating Heart"><option value="Coral"><option value="Hands Up"><option value="DJ Glasses"><option value="Dragon Crown"><option value="Gem Gun"><option value="Money Gun"><option value="VR Goggles"><option value="You're Amazing"><option value="Swan"><option value="Train"><option value="Lucky Airdrop Box"><option value="Travel with You"><option value="Trending Figure"><option value="Galaxy"><option value="Shiny Air Balloon"><option value="Fireworks"></datalist>
 <script>
-'use strict';
+/* ---------- teams ---------- */
+// icon/tname are for the on-screen test buttons. gift {name,id} is the real TikTok gift linked to the country.
+let LANG='en';
+const TEAMS=[
+  {id:'th',names:{en:'Thailand',th:'ไทย'},kw:['ไทย','thai','thailand'],c:'#e0334a',icon:'gg',tnames:{en:'GG',th:'GG'},gift:{name:'GG',id:null}},
+  {id:'vn',names:{en:'Vietnam',th:'เวียดนาม'},kw:['เวียดนาม','vietnam','viet'],c:'#e8362b',icon:'rose',tnames:{en:'Rose',th:'กุหลาบ'},gift:{name:'Rose',id:null}},
+  {id:'la',names:{en:'Laos',th:'ลาว'},kw:['ลาว','laos','lao'],c:'#2b5fd0',icon:'shell',tnames:{en:'Conch',th:'หอยสังข์'},gift:{name:'',id:null}},
+  {id:'mm',names:{en:'Myanmar',th:'พม่า'},kw:['พม่า','เมียนมา','myanmar','burma'],c:'#2f9e4f',icon:'smile',tnames:{en:'Smiley',th:'หน้ายิ้ม'},gift:{name:'',id:null}},
+  {id:'kh',names:{en:'Cambodia',th:'กัมพูชา'},kw:['กัมพูชา','เขมร','cambodia','khmer'],c:'#3a63d8',icon:'note',tnames:{en:'Music note',th:'โน้ตเพลง'},gift:{name:'',id:null}},
+  {id:'my',names:{en:'Malaysia',th:'มาเลเซีย'},kw:['มาเลเซีย','malaysia','malay'],c:'#d9c52e',icon:'cat',tnames:{en:'Cat',th:'แมว'},gift:{name:'',id:null}}
+];
+// name / tname follow the current language
+TEAMS.forEach(t=>{
+  Object.defineProperty(t,'name',{get(){return t.names[LANG];}});
+  Object.defineProperty(t,'tname',{get(){return t.tnames[LANG];}});
+});
+const GOAL=1000;    // first country to receive this many gift pieces wins
+const DRIFT=0.75;   // every boat creeps forward by this many gift-equivalents per second (about 1.5 m/s)
+
+/* ---------- text (English first, Thai available with the language button) ---------- */
 const I18N={
-en:{title:'Gift Video Player',tag:'Loops a video. Each gift plays its own clip.',ph:'Pick a looping video below',
- hLive:'Connect to TikTok LIVE',phUser:'Your TikTok username (no @)',phKey:'TikTool API key',bConnect:'Connect',bDisconnect:'Disconnect',
- idle:'Not connected',needKey:'Enter your username and API key',connecting:'Connecting…',connected:'Connected. Waiting for events…',
- received:(n,t)=>'Connected. '+n+' events received (last: '+t+')',dropped:(c,r)=>'Dropped ('+c+' '+(r||'')+'). Reconnecting…',connFail:'Could not open the connection. Retrying…',
- hIdle:'Looping video (plays all the time)',bPick:'Pick video',bClear:'Remove',noFile:'No video chosen',
- hSlots:'Gifts and their clips',slotNote:'Tap Listen, then send that gift once in your LIVE and the game remembers it. Or type the gift name exactly as TikTok shows it. One gift = one clip, played once, then the loop continues.',
- bAdd:'+ Add gift',gift:n=>'Gift '+n,phGift:'Gift name (e.g. Rose)',bListen:'Listen',bListening:'Send the gift…',bTest:'Test',bRemove:'Remove',
- hOpt:'Options',oIdleSound:'Play sound from the looping video',oFill:'Fill the screen (crop edges)',bLive:'Start live mode',bStop:'Stop playing',bFull:'Fullscreen',
- liveNote:'Live mode hides the controls. Tap the screen to show Skip and Exit for 4 seconds. Keep this page open and the screen on.',
- hLog:'Log',bSkip:'Skip clip',bExit:'Exit live mode',
- learned:(g,n)=>'Linked gift "'+g+'" to slot '+n,unmapped:g=>'Gift "'+g+'" has no clip yet',noClip:n=>'Slot '+n+' has no video yet',
- queued:(w,g,n)=>w+' · '+g+(n>1?' ×'+n:''),dropQ:n=>n+' clip(s) skipped because the queue is full',ready:'Ready',stopped:'Stopped'},
-th:{title:'เครื่องเล่นวิดีโอตามของขวัญ',tag:'เล่นวิดีโอวนลูป พอมีของขวัญก็เล่นคลิปของของขวัญนั้น',ph:'เลือกวิดีโอวนลูปด้านล่าง',
- hLive:'เชื่อมต่อ TikTok LIVE',phUser:'ชื่อ TikTok ของคุณ (ไม่ต้องใส่ @)',phKey:'API key ของ TikTool',bConnect:'เชื่อมต่อ',bDisconnect:'ตัดการเชื่อมต่อ',
- idle:'ยังไม่ได้เชื่อมต่อ',needKey:'ใส่ชื่อผู้ใช้และ API key ก่อน',connecting:'กำลังเชื่อมต่อ…',connected:'เชื่อมต่อแล้ว รอข้อมูล…',
- received:(n,t)=>'เชื่อมต่อแล้ว รับข้อมูล '+n+' รายการ (ล่าสุด: '+t+')',dropped:(c,r)=>'หลุด ('+c+' '+(r||'')+') กำลังต่อใหม่…',connFail:'เปิดการเชื่อมต่อไม่ได้ กำลังลองใหม่…',
- hIdle:'วิดีโอวนลูป (เล่นตลอด)',bPick:'เลือกวิดีโอ',bClear:'ลบ',noFile:'ยังไม่ได้เลือกวิดีโอ',
- hSlots:'ของขวัญและคลิปของมัน',slotNote:'กด "ฟัง" แล้วส่งของขวัญนั้นในไลฟ์ 1 ครั้ง ระบบจะจำให้ หรือพิมพ์ชื่อของขวัญตามที่ TikTok แสดง ของขวัญ 1 ชิ้น = 1 คลิป เล่นครั้งเดียวแล้วกลับไปวนลูป',
- bAdd:'+ เพิ่มของขวัญ',gift:n=>'ของขวัญ '+n,phGift:'ชื่อของขวัญ (เช่น Rose)',bListen:'ฟัง',bListening:'ส่งของขวัญเลย…',bTest:'ทดสอบ',bRemove:'ลบ',
- hOpt:'ตัวเลือก',oIdleSound:'เปิดเสียงจากวิดีโอวนลูป',oFill:'เต็มจอ (ตัดขอบ)',bLive:'เริ่มโหมดไลฟ์',bStop:'หยุดเล่น',bFull:'เต็มจอ',
- liveNote:'โหมดไลฟ์จะซ่อนปุ่ม แตะหน้าจอเพื่อแสดงปุ่มข้ามคลิปและออก 4 วินาที เปิดหน้านี้ค้างไว้และอย่าให้จอดับ',
- hLog:'บันทึก',bSkip:'ข้ามคลิป',bExit:'ออกจากโหมดไลฟ์',
- learned:(g,n)=>'ผูกของขวัญ "'+g+'" กับช่อง '+n,unmapped:g=>'ของขวัญ "'+g+'" ยังไม่มีคลิป',noClip:n=>'ช่อง '+n+' ยังไม่มีวิดีโอ',
- queued:(w,g,n)=>w+' · '+g+(n>1?' ×'+n:''),dropQ:n=>'ข้าม '+n+' คลิป เพราะคิวเต็ม',ready:'พร้อม',stopped:'หยุดแล้ว'}
+  en:{
+    title:'Long Boat Flag Race',sub:'First country to receive 1,000 gifts wins',
+    hConn:'Connect to TikTok LIVE',phUser:'Your TikTok username (no @)',phKey:'TikTool API key',
+    bConnect:'Connect',bDisconnect:'Disconnect',
+    hMap:'Link gifts to countries',
+    mapHint:'Tap "Listen", then send that gift once in your LIVE. The game remembers it for that country. Or type the gift name exactly as TikTok shows it (for example Rose or GG). One gift per country.',
+    mapListen:'Listen',mapWait:'Waiting…',phGift:n=>'Gift name for '+n,
+    hTest:'Test without going live: viewer name and team',tapFlag:'Tap a flag to join a team',
+    hGifts:'Send test gifts (1 gift per country)',hCmt:'Test comment',phCmt:'Type a country, e.g. Thailand or Vietnam',bSend:'Send',
+    hBoard:'Gift standings',bLive:'Live mode',bReset:'Restart race',bExit:'Exit live mode',
+    soundOn:'Sound: On',soundOff:'Sound: Off',musOn:'Music: On',musOff:'Music: Off',autoOn:'Simulate viewers: On',autoOff:'Simulate viewers: Off',langBtn:'ภาษาไทย',
+    ariaCanvas:'Race track with 6 teams',ariaVname:'Test viewer name',ariaQty:'Pieces per tap',
+    note:"The track is 2,000 m and the camera follows the leader. 1 gift = 2 m, so 1,000 gifts reach the finish. Every boat also drifts forward slowly at the same speed, but drifting alone never reaches the finish line. Likes and comments do not move boats. Viewers join a team by commenting a country name, and their likes then add effects to their own team's boat. When a team wins, the result shows for 8 seconds and a new round starts. All sounds are generated in the page: tap Sound once to turn them on.",
+    idle:'Not connected',needKey:'Enter your username and API key first',connFail:'Could not connect. Retrying in 3 s',
+    connecting:'Connecting…',connected:'Connected. Waiting for LIVE events',
+    dropped:(c,r)=>'Disconnected ('+c+(r?' '+r:'')+'). Retrying in 3 s',received:(n,t)=>'Received '+n+' events (latest: '+t+')',
+    viewer:'Viewer',me:'Me',cheer:'Cheer',cheerLog:(w,t)=>w+' cheers for '+t,
+    giftLog:(w,g,n,t)=>w+' sent '+g+(n>1?' x'+n:'')+' to '+t,
+    learned:(g,t)=>'Linked "'+g+'" to '+t,unmapped:g=>'Gift "'+g+'" is not linked to a country yet',
+    learnPrompt:t=>'Send 1 gift in your LIVE to link it to '+t,
+    go:'Go!',leads:t=>t+' takes the lead',winLog:t=>'Winner: '+t,newRound:'New round started',
+    ready:'Ready. Enter your username and API key and tap Connect, or test with the buttons below',
+    notSet:'Not set',unitM:'m',goalLine:g=>'First country to receive '+g+' gifts wins',
+    countdown:"Send your country's gift!",winner:'WINNER',topSup:n=>'Top supporter: '+n,nextRound:s=>'Next round in '+s+' s',
+    boardRow:(t,g,w)=>t+' · '+g+' · Wins '+w,noGift:'No gift set',
+    sup1:(n,p)=>'Top supporter: '+n+' ('+p+' gifts)',noSup:'No supporters this round yet'
+  },
+  th:{
+    title:'เรือยาวชิงธง',sub:'ประเทศแรกที่ได้ของขวัญครบ 1,000 ชิ้นชนะ',
+    hConn:'เชื่อมต่อไลฟ์ TikTok',phUser:'ชื่อผู้ใช้ TikTok ของคุณ (ไม่ต้องมี @)',phKey:'TikTool API key',
+    bConnect:'เชื่อมต่อ',bDisconnect:'ตัดการเชื่อมต่อ',
+    hMap:'จับคู่ของขวัญกับประเทศ',
+    mapHint:'แตะ "ฟัง" แล้วส่งของขวัญที่ต้องการในไลฟ์ 1 ชิ้น ระบบจะจำของขวัญชิ้นนั้นให้ประเทศนั้น หรือพิมพ์ชื่อของขวัญเอง (ตามที่ TikTok ใช้ เช่น Rose, GG) หนึ่งของขวัญต่อหนึ่งประเทศ',
+    mapListen:'ฟัง',mapWait:'รอรับ…',phGift:n=>'ชื่อของขวัญของ'+n,
+    hTest:'ทดสอบโดยไม่ต้องไลฟ์: ชื่อผู้ชมและทีมที่เชียร์',tapFlag:'แตะธงเพื่อเข้าทีม',
+    hGifts:'ส่งของขวัญทดสอบ (1 ชิ้นต่อ 1 ประเทศ)',hCmt:'คอมเมนต์ทดสอบ',phCmt:'พิมพ์ชื่อประเทศ เช่น ไทย, vietnam',bSend:'ส่ง',
+    hBoard:'อันดับของขวัญ',bLive:'โหมดไลฟ์',bReset:'เริ่มแข่งใหม่',bExit:'ออกจากโหมดไลฟ์',
+    soundOn:'เสียง: เปิด',soundOff:'เสียง: ปิด',musOn:'เพลง: เปิด',musOff:'เพลง: ปิด',autoOn:'จำลองผู้ชม: เปิด',autoOff:'จำลองผู้ชม: ปิด',langBtn:'English',
+    ariaCanvas:'สนามแข่งเรือ 6 ทีม',ariaVname:'ชื่อผู้ชมทดสอบ',ariaQty:'จำนวนชิ้นต่อการแตะ',
+    note:'สนามยาว 2,000 เมตร กล้องตามเรือที่นำอยู่ ของขวัญ 1 ชิ้น = 2 เมตร ครบ 1,000 ชิ้นถึงเส้นชัย เรือทุกลำแล่นเองช้าๆ เท่ากัน แต่แล่นเองอย่างเดียวไปไม่ถึงเส้นชัย ไลก์และคอมเมนต์ไม่นับเป็นระยะ ผู้ชมพิมพ์ชื่อประเทศในคอมเมนต์เพื่อเข้าทีม ไลก์ของคนนั้นจะทำให้เรือทีมตัวเองมีเอฟเฟกต์ เมื่อมีทีมชนะ ระบบแสดงผล 8 วินาทีแล้วเริ่มรอบใหม่เอง เสียงทั้งหมดสังเคราะห์ในหน้านี้ ต้องกด "เสียง" หนึ่งครั้งเพื่อเปิด',
+    idle:'ยังไม่ได้เชื่อมต่อ',needKey:'กรอกชื่อผู้ใช้และ API key ก่อน',connFail:'เชื่อมต่อไม่ได้ ลองใหม่ใน 3 วินาที',
+    connecting:'กำลังเชื่อมต่อ…',connected:'เชื่อมต่อแล้ว รอเหตุการณ์จากไลฟ์',
+    dropped:(c,r)=>'หลุดการเชื่อมต่อ ('+c+(r?' '+r:'')+') ลองใหม่ใน 3 วินาที',received:(n,t)=>'รับแล้ว '+n+' เหตุการณ์ (ล่าสุด: '+t+')',
+    viewer:'ผู้ชม',me:'ฉัน',cheer:'เชียร์',cheerLog:(w,t)=>w+' เชียร์'+t,
+    giftLog:(w,g,n,t)=>w+' ส่ง'+g+(n>1?' x'+n:'')+' ให้'+t,
+    learned:(g,t)=>'จับคู่ "'+g+'" กับ'+t+' แล้ว',unmapped:g=>'ของขวัญ "'+g+'" ยังไม่ได้จับคู่กับประเทศ',
+    learnPrompt:t=>'ส่งของขวัญในไลฟ์ 1 ชิ้น เพื่อจับคู่กับ'+t,
+    go:'ออกเรือ!',leads:t=>t+' ขึ้นนำ',winLog:t=>'ชนะเลิศ: '+t,newRound:'เริ่มแข่งรอบใหม่',
+    ready:'พร้อมแข่ง ใส่ชื่อผู้ใช้กับ API key แล้วกดเชื่อมต่อ หรือทดสอบด้วยปุ่มด้านล่าง',
+    notSet:'ยังไม่ตั้ง',unitM:'ม.',goalLine:g=>'ประเทศแรกที่ได้รับของขวัญครบ '+g+' ชิ้นชนะ',
+    countdown:'เตรียมส่งของขวัญประจำชาติ',winner:'ชนะเลิศ',topSup:n=>'ผู้สนับสนุนยอดเยี่ยม: '+n,nextRound:s=>'รอบใหม่เริ่มในอีก '+s+' วินาที',
+    boardRow:(t,g,w)=>t+' · '+g+' · ชนะ '+w,noGift:'ยังไม่ตั้งของขวัญ',
+    sup1:(n,p)=>'ผู้สนับสนุนอันดับ 1: '+n+' ('+p+' ชิ้น)',noSup:'ยังไม่มีผู้สนับสนุนในรอบนี้'
+  }
 };
-const KEY='giftvideo.cfg.v1';
-let cfg={user:'',key:'',lang:'en',idleSound:false,fill:true,slots:[]};
-try{Object.assign(cfg,JSON.parse(localStorage.getItem(KEY)||'{}'));}catch(e){}
-if(!Array.isArray(cfg.slots)||!cfg.slots.length)cfg.slots=Array.from({length:6},(_,i)=>({id:'s'+(i+1),name:'',gid:null}));
-let LANG=cfg.lang==='th'?'th':'en';
 function L(k,...a){const v=I18N[LANG][k];return typeof v==='function'?v(...a):v;}
-function save(){cfg.lang=LANG;try{localStorage.setItem(KEY,JSON.stringify(cfg));}catch(e){}}
-const $=id=>document.getElementById(id);
 
-/* ---------- video storage (IndexedDB keeps the chosen files on this phone) ---------- */
-const DB={
-  db:null,
-  open(){return new Promise(res=>{try{const r=indexedDB.open('giftvideo',1);r.onupgradeneeded=()=>r.result.createObjectStore('clips');r.onsuccess=()=>{DB.db=r.result;res(true);};r.onerror=()=>res(false);}catch(e){res(false);}});},
-  tx(m){return DB.db.transaction('clips',m).objectStore('clips');},
-  get(k){return new Promise(res=>{if(!DB.db)return res(null);const q=DB.tx('readonly').get(k);q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null);});},
-  put(k,v){return new Promise(res=>{if(!DB.db)return res(false);const q=DB.tx('readwrite').put(v,k);q.onsuccess=()=>res(true);q.onerror=()=>res(false);});},
-  del(k){return new Promise(res=>{if(!DB.db)return res(false);const q=DB.tx('readwrite').delete(k);q.onsuccess=()=>res(true);q.onerror=()=>res(false);});}
+/* ---------- saved settings ---------- */
+const CFG_KEY='boatrace.cfg.v1';
+function loadCfg(){try{return JSON.parse(localStorage.getItem(CFG_KEY)||'{}')||{};}catch(e){return {};}}
+const cfg0=loadCfg();
+LANG=cfg0.lang==='th'?'th':'en';
+if(Array.isArray(cfg0.map)&&cfg0.map.length===TEAMS.length){
+  cfg0.map.forEach((g,i)=>{if(g&&typeof g==='object')TEAMS[i].gift={name:String(g.name||''),id:g.id==null?null:g.id};});
+}
+function saveCfg(){
+  try{localStorage.setItem(CFG_KEY,JSON.stringify({
+    user:document.getElementById('tuser').value.trim(),
+    key:document.getElementById('tkey').value.trim(),
+    map:TEAMS.map(t=>t.gift),
+    lang:LANG
+  }));}catch(e){}
+}
+
+/* ---------- flags (drawn in code) ---------- */
+function star(g,cx,cy,r,col){
+  g.fillStyle=col;g.beginPath();
+  for(let i=0;i<10;i++){
+    const a=-Math.PI/2+i*Math.PI/5,rr=i%2?r*0.4:r;
+    g[i?'lineTo':'moveTo'](cx+Math.cos(a)*rr,cy+Math.sin(a)*rr);
+  }
+  g.closePath();g.fill();
+}
+function bands(g,x,y,w,h,cols,ws){
+  let yy=y;const tot=ws.reduce((a,b)=>a+b,0);
+  cols.forEach((c,i)=>{const hh=h*ws[i]/tot;g.fillStyle=c;g.fillRect(x,yy,w,hh+0.5);yy+=hh;});
+}
+function drawFlag(g,id,x,y,w,h){
+  g.save();g.beginPath();g.rect(x,y,w,h);g.clip();
+  if(id==='th'){bands(g,x,y,w,h,['#a51931','#f4f5f8','#2d2a4a','#f4f5f8','#a51931'],[1,1,2,1,1]);}
+  else if(id==='vn'){g.fillStyle='#da251d';g.fillRect(x,y,w,h);star(g,x+w/2,y+h/2,h*0.34,'#ffde00');}
+  else if(id==='la'){bands(g,x,y,w,h,['#ce1126','#002868','#ce1126'],[1,2,1]);g.fillStyle='#fff';g.beginPath();g.arc(x+w/2,y+h/2,h*0.3,0,7);g.fill();}
+  else if(id==='mm'){bands(g,x,y,w,h,['#fecb00','#34b233','#ea2839'],[1,1,1]);star(g,x+w/2,y+h/2,h*0.3,'#fff');}
+  else if(id==='kh'){bands(g,x,y,w,h,['#032ea1','#e00025','#032ea1'],[1,2,1]);
+    g.fillStyle='#fff';const cx=x+w/2,cy=y+h/2;
+    g.fillRect(cx-w*0.17,cy+h*0.08,w*0.34,h*0.1);
+    g.fillRect(cx-w*0.11,cy-h*0.05,w*0.22,h*0.14);
+    g.fillRect(cx-w*0.05,cy-h*0.2,w*0.1,h*0.16);}
+  else if(id==='my'){
+    for(let i=0;i<14;i++){g.fillStyle=i%2?'#fff':'#cc0001';g.fillRect(x,y+h*i/14,w,h/14+0.5);}
+    g.fillStyle='#010066';g.fillRect(x,y,w*0.5,h*8/14);
+    g.fillStyle='#fc0';g.beginPath();g.arc(x+w*0.22,y+h*4/14,h*0.19,0,7);g.fill();
+    g.fillStyle='#010066';g.beginPath();g.arc(x+w*0.26,y+h*4/14,h*0.16,0,7);g.fill();
+    star(g,x+w*0.34,y+h*4/14,h*0.12,'#fc0');}
+  g.restore();
+}
+
+/* ---------- gift icons (drawn in code) ---------- */
+function drawGiftIcon(g,id,cx,cy,r,col){
+  g.save();g.translate(cx,cy);
+  const disc=(col)=>{g.fillStyle=col;g.beginPath();g.arc(0,0,r,0,7);g.fill();};
+  if(id==='gg'){
+    disc('#5b4bd6');g.fillStyle='#fff';g.font='700 '+(r*1.15)+'px Sarabun,sans-serif';g.textAlign='center';g.textBaseline='middle';
+    g.fillText('GG',0,r*0.06);
+  }else if(id==='rose'){
+    disc('#2a1620');
+    g.fillStyle='#2f9e4f';g.beginPath();g.ellipse(r*0.28,r*0.5,r*0.34,r*0.16,-0.6,0,7);g.fill();
+    [[0,0,0.62,'#c3162f'],[-0.12,-0.08,0.42,'#e11d3c'],[0.1,0.02,0.3,'#f03a55'],[0,-0.05,0.14,'#a50f26']].forEach(([x,y,s,c])=>{g.fillStyle=c;g.beginPath();g.arc(x*r,y*r-r*0.08,s*r,0,7);g.fill();});
+  }else if(id==='shell'){
+    disc('#2b3550');
+    g.fillStyle='#f3dfd2';g.beginPath();g.moveTo(-r*0.55,r*0.45);g.quadraticCurveTo(-r*0.7,-r*0.5,0,-r*0.65);g.quadraticCurveTo(r*0.7,-r*0.5,r*0.55,r*0.45);g.closePath();g.fill();
+    g.strokeStyle='#c99a86';g.lineWidth=Math.max(1,r*0.08);
+    for(let k=-2;k<=2;k++){g.beginPath();g.moveTo(0,r*0.5);g.lineTo(k*r*0.2,-r*0.58);g.stroke();}
+  }else if(id==='smile'){
+    disc('#ffd23f');
+    g.fillStyle='#4a3500';g.beginPath();g.arc(-r*0.32,-r*0.2,r*0.1,0,7);g.arc(r*0.32,-r*0.2,r*0.1,0,7);g.fill();
+    g.strokeStyle='#4a3500';g.lineWidth=Math.max(1,r*0.11);g.lineCap='round';g.beginPath();g.arc(0,r*0.05,r*0.45,0.15*Math.PI,0.85*Math.PI);g.stroke();
+  }else if(id==='note'){
+    disc('#7a3fb8');
+    g.fillStyle='#fff';g.strokeStyle='#fff';g.lineWidth=Math.max(1.2,r*0.13);
+    g.beginPath();g.ellipse(-r*0.18,r*0.4,r*0.25,r*0.18,-0.4,0,7);g.fill();
+    g.beginPath();g.moveTo(r*0.04,r*0.34);g.lineTo(r*0.04,-r*0.55);g.quadraticCurveTo(r*0.4,-r*0.4,r*0.4,-r*0.1);g.stroke();
+  }else if(id==='box'){
+    // neutral gift box in the team colour, used when the linked gift is not one of the drawn icons
+    disc(col||'#4a5a66');
+    g.fillStyle='rgba(255,255,255,0.92)';
+    g.fillRect(-r*0.5,-r*0.2,r*1.0,r*0.7);
+    g.fillStyle='rgba(0,0,0,0.28)';g.fillRect(-r*0.08,-r*0.2,r*0.16,r*0.7);
+    g.fillStyle='rgba(255,255,255,0.92)';g.fillRect(-r*0.58,-r*0.42,r*1.16,r*0.24);
+    g.fillStyle='rgba(0,0,0,0.28)';g.fillRect(-r*0.08,-r*0.42,r*0.16,r*0.24);
+  }else if(id==='cat'){
+    disc('#2a2f3a');
+    g.fillStyle='#f0a64a';
+    g.beginPath();g.moveTo(-r*0.6,-r*0.15);g.lineTo(-r*0.5,-r*0.7);g.lineTo(-r*0.12,-r*0.4);g.fill();
+    g.beginPath();g.moveTo(r*0.6,-r*0.15);g.lineTo(r*0.5,-r*0.7);g.lineTo(r*0.12,-r*0.4);g.fill();
+    g.beginPath();g.ellipse(0,r*0.1,r*0.6,r*0.5,0,0,7);g.fill();
+    g.fillStyle='#2a1a00';g.beginPath();g.arc(-r*0.24,r*0.02,r*0.07,0,7);g.arc(r*0.24,r*0.02,r*0.07,0,7);g.fill();
+    g.beginPath();g.moveTo(-r*0.07,r*0.2);g.lineTo(r*0.07,r*0.2);g.lineTo(0,r*0.3);g.fill();
+  }
+  g.restore();
+}
+
+/* ---------- sound effects (synthesised with Web Audio, no files) ---------- */
+const SFX=(()=>{
+  let ctx=null,master=null,on=false,amb=null,out=null,mg=null,musicOn=false,mTimer=null,mStep=0,mNext=0,mood=0;
+  const recent=[];
+  const NOTES=[523.25,587.33,659.25,783.99,880,1046.5]; // one pentatonic note per country
+  function ensure(){
+    if(!ctx){
+      const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;
+      ctx=new AC();master=ctx.createGain();master.gain.value=0.55;master.connect(ctx.destination);out=master;mg=ctx.createGain();mg.gain.value=0.5;mg.connect(master);
+    }
+    if(ctx.state==='suspended')ctx.resume();
+    return true;
+  }
+  function tone(f,t0,dur,o){
+    o=o||{};const osc=ctx.createOscillator(),gn=ctx.createGain();
+    osc.type=o.type||'sine';osc.frequency.setValueAtTime(f,t0);
+    if(o.slide)osc.frequency.exponentialRampToValueAtTime(Math.max(30,f*o.slide),t0+dur);
+    const vol=o.vol||0.2;
+    gn.gain.setValueAtTime(0.0001,t0);gn.gain.exponentialRampToValueAtTime(vol,t0+0.006);
+    gn.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    osc.connect(gn);gn.connect(out);osc.start(t0);osc.stop(t0+dur+0.05);
+  }
+  function noiseBuf(dur){
+    const len=Math.floor(ctx.sampleRate*dur),buf=ctx.createBuffer(1,len,ctx.sampleRate),d=buf.getChannelData(0);
+    for(let i=0;i<len;i++)d[i]=Math.random()*2-1;return buf;
+  }
+  function noise(t0,dur,vol,freq,type){
+    const s=ctx.createBufferSource();s.buffer=noiseBuf(dur);
+    const f=ctx.createBiquadFilter();f.type=type||'lowpass';f.frequency.value=freq;
+    const gn=ctx.createGain();gn.gain.setValueAtTime(vol,t0);gn.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    s.connect(f);f.connect(gn);gn.connect(out);s.start(t0);
+  }
+  function allow(max){
+    const now=performance.now();
+    while(recent.length&&now-recent[0]>1000)recent.shift();
+    if(recent.length>=max)return false;recent.push(now);return true;
+  }
+  function startAmb(){
+    if(amb||!ctx)return;
+    const s=ctx.createBufferSource();s.buffer=noiseBuf(3);s.loop=true;
+    const f=ctx.createBiquadFilter();f.type='bandpass';f.frequency.value=420;f.Q.value=0.5;
+    const gn=ctx.createGain();gn.gain.value=0.03;
+    s.connect(f);f.connect(gn);gn.connect(master);s.start();amb={s,gn};
+  }
+
+  // ---- background music: 128 BPM dance beat + pentatonic ranat-style lead, gets busier as the race heats up ----
+  const BASS=[110,110,130.81,98,110,110,146.83,98];       // A2 A2 C3 G2 ... one per half bar
+  const LEAD=[440,523.25,587.33,659.25,783.99,880,1046.5]; // A minor pentatonic-ish
+  const RIFF=[0,2,3,2,4,3,2,1, 0,2,3,5,4,3,2,3, 3,4,5,6,5,4,3,2, 4,3,2,1,2,3,1,0]; // 32 steps = 2 bars
+  function musicStep(step,t){
+    const m=mood,s16=step%16,bar=Math.floor(step/16);
+    out=mg;
+    if(s16%4===0)tone(150,t,0.2,{vol:0.55,slide:0.25});                    // kick
+    if(m>0.55&&s16===14)tone(150,t,0.15,{vol:0.4,slide:0.25});
+    if(s16===4||s16===12){noise(t,0.12,0.22,1800,'bandpass');tone(190,t,0.1,{type:'triangle',vol:0.12});} // clap
+    if(s16%2===0)noise(t,0.04,m>0.6?0.07:0.04,8000,'highpass');             // hat
+    else if(m>0.6)noise(t,0.03,0.04,9000,'highpass');
+    if(m>0.12&&s16%2===1){const bf=BASS[(bar*2+(s16>7?1:0))%BASS.length];tone(bf,t,0.2,{type:'sawtooth',vol:0.1});} // offbeat bass
+    if(m>0.3){const n=RIFF[step%32];
+      if(s16%2===0||m>0.7){const f=LEAD[n]*(m>0.85&&s16%4===0?2:1);
+        tone(f,t,0.22,{type:'triangle',vol:0.09});tone(f*2,t,0.1,{type:'sine',vol:0.04});}} // bright, short, ranat-like
+    if(m>0.5&&s16===0&&bar%2===0)noise(t,0.5,0.06,5000,'highpass');         // crash
+    out=master;
+  }
+  function musicTick(){
+    if(!musicOn||!ctx)return;
+    const spb=60/128/4;
+    if(mNext<ctx.currentTime-0.2)mNext=ctx.currentTime+0.05;
+    while(mNext<ctx.currentTime+0.2){musicStep(mStep,mNext);mStep++;mNext+=spb;}
+  }
+  function startMusic(){if(!ctx||mTimer)return;musicOn=true;mStep=0;mNext=ctx.currentTime+0.1;mTimer=setInterval(musicTick,40);}
+  function stopMusic(){musicOn=false;if(mTimer){clearInterval(mTimer);mTimer=null;}}
+  function stopAmb(){if(amb){try{amb.s.stop();}catch(e){}amb=null;}}
+  const api={
+    get on(){return on;},
+    get music(){return musicOn;},
+    setMusic(v){if(v){if(!on||!ensure())return false;startMusic();}else stopMusic();return musicOn;},
+    mood(x){mood=x;},
+    set(v){
+      if(v){if(!ensure())return false;on=true;startAmb();api.pop();startMusic();}
+      else{on=false;stopAmb();stopMusic();}
+      return on;
+    },
+    tick(n){if(!on)return;tone(n===1?660:440,ctx.currentTime,0.14,{type:'square',vol:0.06});},
+    go(){if(!on)return;const t=ctx.currentTime;
+      tone(196,t,0.7,{type:'sawtooth',vol:0.07});tone(294,t,0.7,{type:'sawtooth',vol:0.06});noise(t,0.5,0.08,2500,'lowpass');},
+    gift(i,count){
+      if(!on||!allow(10))return;const t=ctx.currentTime,f=NOTES[i%6];
+      tone(f,t,0.5,{vol:0.16});tone(f*2,t,0.3,{vol:0.06});noise(t,0.12,0.05,1400,'bandpass');
+      if(count>=5)[1.25,1.5,2].forEach((r,k)=>tone(f*r,t+0.07*(k+1),0.35,{vol:0.09}));
+      if(count>=10)noise(t+0.1,0.6,0.1,6000,'highpass');
+    },
+    like(){if(!on||!allow(6))return;tone(1200,ctx.currentTime,0.05,{type:'triangle',vol:0.04});},
+    pop(){if(!on)return;tone(520,ctx.currentTime,0.09,{type:'triangle',vol:0.08,slide:1.6});},
+    lead(){if(!on)return;const t=ctx.currentTime;tone(700,t,0.08,{type:'triangle',vol:0.08});tone(940,t+0.08,0.14,{type:'triangle',vol:0.08});},
+    win(){if(!on)return;const t=ctx.currentTime;
+      [523.25,659.25,783.99,1046.5].forEach((f,k)=>tone(f,t+k*0.14,0.5,{type:'triangle',vol:0.17}));
+      tone(1046.5,t+0.6,1.0,{type:'triangle',vol:0.15});noise(t+0.5,0.9,0.1,4000,'highpass');}
+  };
+  return api;
+})();
+
+/* ---------- state ---------- */
+const W=360,H=500,TOP=54,LANE=(H-TOP-12)/6,START=88,FINISH=W-44;
+const TRACK=2000;   // race length in metres (GOAL gift pieces = the whole track)
+const VIEW=500;     // metres visible on screen at once; the camera follows the leader
+const state={
+  cam:0,leader:-1,lastTick:0,learn:-1,
+  boats:[],winner:-1,phase:'countdown',cd:3,doneT:0,
+  feed:[],auto:null,t:0,
+  viewers:new Map(),                      // name -> team index
+  supporters:TEAMS.map(()=>new Map()),    // per team: name -> points
+  wins:TEAMS.map(()=>0),
+  lastLike:TEAMS.map(()=>0),
+  parts:[],drops:[],sparks:[],fly:[],confetti:[]
 };
-const clips={};   // key -> {name,url}
-function setClip(k,file){
-  if(clips[k]&&clips[k].url)URL.revokeObjectURL(clips[k].url);
-  clips[k]={name:file.name||'video',url:URL.createObjectURL(file)};
+function resetRace(){
+  state.boats=TEAMS.map(()=>({p:0,gifts:0,drift:0,boost:0,pulse:0}));
+  state.winner=-1;state.phase='countdown';state.cd=3;state.cam=0;state.leader=-1;state.lastTick=0;
+  state.parts=[];state.drops=[];state.sparks=[];state.fly=[];state.confetti=[];
+  state.supporters=TEAMS.map(()=>new Map());
+  renderBoard();
 }
-async function loadClips(){
-  await DB.open();
-  for(const k of ['idle',...cfg.slots.map(s=>s.id)]){
-    const r=await DB.get(k);if(r&&r.blob)setClip(k,r.blob.name?r.blob:new File([r.blob],r.name||'video',{type:r.blob.type}));
-    if(r&&r.name&&clips[k])clips[k].name=r.name;
-  }
+const sx=m=>START+(m-state.cam)/VIEW*(FINISH-START-6);   // world metres -> screen x
+const boatX=i=>Math.max(START,sx(state.boats[i].p*TRACK));
+const laneY=i=>TOP+i*LANE+LANE/2+4;
+const giftLabel=i=>TEAMS[i].gift.name||TEAMS[i].tname;
+// The drawn icons are only right for GG and Rose. Any other linked gift gets a neutral box in the team colour.
+const ICON_FOR={gg:'gg',rose:'rose'};
+function laneIcon(i){
+  const n=TEAMS[i].gift.name.trim().toLowerCase();
+  return ICON_FOR[n]&&ICON_FOR[n]===TEAMS[i].icon?TEAMS[i].icon:'box';
 }
 
-/* ---------- log ---------- */
-function log(t){
-  const d=document.createElement('div');d.textContent=new Date().toLocaleTimeString()+'  '+t;
-  const box=$('log');box.prepend(d);while(box.children.length>40)box.lastChild.remove();
+const feedEl=document.getElementById('feed');
+function log(txt){
+  state.feed.unshift(txt);state.feed.length=Math.min(state.feed.length,4);
+  feedEl.innerHTML=state.feed.map(()=>'<li></li>').join('');
+  [...feedEl.children].forEach((li,i)=>li.textContent=state.feed[i]);
 }
+const nameOf=n=>(n&&String(n).trim())||L('viewer');
 
-/* ---------- player ---------- */
-const vIdle=$('vIdle'),vClip=$('vClip'),toast=$('toast');
-let started=false,playing=false,cur=null,guard=null,toastT=null;
-const queue=[],MAXQ=15;
-function applyIdle(){
-  const c=clips.idle;
-  $('ph').style.display=c?'none':'flex';
-  if(c){if(vIdle.dataset.src!==c.url){vIdle.src=c.url;vIdle.dataset.src=c.url;}}
-  else{vIdle.removeAttribute('src');vIdle.dataset.src='';vIdle.load();}
-  vIdle.muted=!cfg.idleSound||playing;
-  if(started&&c)vIdle.play().catch(()=>{});
+// Visual reaction only. Progress comes from b.gifts, which only gifts raise.
+function boost(i,vis,who,short,giftKey,count,pts){
+  if(state.phase!=='race')return;
+  const b=state.boats[i];b.boost=Math.min(14,b.boost+vis);b.pulse=1;
+  if(pts){const m=state.supporters[i];m.set(who,(m.get(who)||0)+pts);}
+  if(state.parts.length<60)state.parts.push({x:boatX(i),y:laneY(i)-40,vy:-26,life:1,text:short||'+',c:TEAMS[i].c});
+  if(giftKey&&state.fly.length<30)state.fly.push({i,giftId:giftKey,t:0,dur:0.55,n:Math.min(26,8+(count||1)*2)});
+  renderBoard();
 }
-function say(t){toast.textContent=t;toast.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>toast.classList.remove('on'),3000);}
-function endClip(){
-  clearTimeout(guard);
-  vClip.classList.remove('on');vClip.pause();vClip.removeAttribute('src');vClip.load();
-  playing=false;cur=null;applyIdle();pump();
-}
-function pump(){
-  if(playing||!queue.length)return;
-  const it=queue.shift(),c=clips[it.id];
-  if(!c){pump();return;}
-  playing=true;cur=it;vIdle.muted=true;
-  vClip.src=c.url;vClip.muted=false;vClip.currentTime=0;
-  vClip.classList.add('on');
-  guard=setTimeout(endClip,10*60*1000);
-  vClip.play().catch(()=>{vClip.muted=true;vClip.play().catch(endClip);});
-}
-vClip.addEventListener('ended',endClip);
-vClip.addEventListener('error',()=>{if(playing)endClip();});
-function enqueue(id,who,gname,n){
-  let dropped=0;
-  for(let k=0;k<n;k++){if(queue.length>=MAXQ)dropped++;else queue.push({id,who,gname});}
-  if(dropped)log(L('dropQ',dropped));
-  if(n>dropped)say(L('queued',who,gname,n-dropped));
-  pump();
-}
-function startPlayback(){started=true;applyIdle();}
-function stopPlayback(){started=false;queue.length=0;if(playing)endClip();vIdle.pause();log(L('stopped'));}
-
-/* ---------- gift to clip mapping ---------- */
-const slotNo=id=>cfg.slots.findIndex(s=>s.id===id)+1;
-function slotForGift(name,id){
-  for(const s of cfg.slots)if(s.gid!=null&&id!=null&&String(s.gid)===String(id))return s;
-  const n=String(name||'').trim().toLowerCase();
-  if(n)for(const s of cfg.slots)if(s.name&&s.name.trim().toLowerCase()===n)return s;
-  return null;
-}
-let learning=null;
-const streaks=new Map(),unmappedSeen=new Map();
-setInterval(()=>{const now=performance.now();streaks.forEach((v,k)=>{if(now-v.t>8000)streaks.delete(k);});},2000);
-const viewerName=d=>(d.user&&(d.user.nickname||d.user.uniqueId))||d.nickname||d.uniqueId||'Viewer';
-function onGift(d){
-  const gname=d.giftName||'',gid=d.giftId==null?null:d.giftId,who=viewerName(d);
-  if(learning){
-    const s=cfg.slots.find(x=>x.id===learning);learning=null;
-    if(s){s.name=gname;s.gid=gid;save();renderSlots();log(L('learned',gname||gid,slotNo(s.id)));}
-    return;
+const RaceAPI={
+  // viewer writes a comment; naming a country joins that team
+  comment(text,who){
+    who=nameOf(who);
+    const s=String(text).toLowerCase();
+    const i=TEAMS.findIndex(t=>t.kw.some(k=>s.includes(k)));
+    if(i<0){log(who+': '+text);return;}
+    state.viewers.set(who,i);
+    log(L('cheerLog',who,TEAMS[i].name));
+    SFX.pop();
+    boost(i,0.3,who,L('cheer'));
+    syncChips();
+  },
+  // test gift by on-screen key (gg, rose, shell, smile, note, cat)
+  gift(who,giftKey,count){
+    const i=TEAMS.findIndex(t=>t.icon===giftKey);if(i<0)return;
+    RaceAPI.giftToTeam(i,who,count);
+  },
+  // add gift pieces to a country (this is what a real TikTok gift calls)
+  giftToTeam(i,who,count){
+    who=nameOf(who);count=Math.max(1,Math.min(999,Math.floor(count)||1));
+    if(state.phase!=='race')return;
+    const b=state.boats[i];if(b.gifts>=GOAL)return;
+    const n=Math.min(count,GOAL-b.gifts);b.gifts+=n;
+    log(L('giftLog',who,giftLabel(i),n,TEAMS[i].name));
+    boost(i,Math.min(8,0.6+n*0.2),who,giftLabel(i)+(n>1?' x'+n:''),laneIcon(i),n,n);
+    SFX.gift(i,n);
+  },
+  // likes only add an effect for viewers who joined a team by commenting a country name
+  like(who){
+    who=nameOf(who);const i=state.viewers.get(who);if(i===undefined)return;
+    const now=performance.now();if(now-state.lastLike[i]<150)return;state.lastLike[i]=now;
+    boost(i,0.15,who,'');SFX.like();
   }
-  const s=slotForGift(gname,gid);
-  if(!s){
-    const k=gname||String(gid),now=performance.now();
-    if(now-(unmappedSeen.get(k)||0)>10000){unmappedSeen.set(k,now);log(L('unmapped',k));}
-    return;
-  }
-  let n;   // streak gifts arrive as growing frames: count only what is new
-  if(d.giftType===1||d.repeatEnd===false){
-    const key=who+'|'+(gid==null?gname:gid),rc=Math.max(1,d.repeatCount||1),prev=streaks.get(key);
-    n=prev&&rc>=prev.c?rc-prev.c:rc;
-    if(d.repeatEnd)streaks.delete(key);else streaks.set(key,{c:rc,t:performance.now()});
-  }else n=Math.max(1,d.repeatCount||1);
-  if(n>0)enqueue(s.id,who,gname||s.name,n);
-}
+};
+window.RaceAPI=RaceAPI;
 
 /* ---------- live connection (TikTool WebSocket) ---------- */
-const conn={ws:null,want:false,retry:null,state:'off',events:0,key:'idle',args:[]};
+const tuser=document.getElementById('tuser'),tkey=document.getElementById('tkey');
+tuser.value=cfg0.user||'';tkey.value=cfg0.key||'';
+const conn={ws:null,want:false,retry:null,state:'off',events:0};
+const cstat=document.getElementById('cstat'),connBtn=document.getElementById('conn');
+// status text is stored as a key so it can be redrawn when the language changes
 function setConn(s,key,...args){conn.state=s;conn.key=key;conn.args=args;renderConn();}
 function renderConn(){
-  $('cstat').textContent=L(conn.key||'idle',...(conn.args||[]));
-  $('cstat').className='sub '+(conn.state==='on'?'ok':conn.state==='retry'?'bad':'');
-  $('conn').textContent=L(conn.want?'bDisconnect':'bConnect');
+  cstat.textContent=L(conn.key||'idle',...(conn.args||[]));
+  cstat.className='sub '+(conn.state==='on'?'ok':conn.state==='retry'?'bad':'');
+  connBtn.textContent=L(conn.want?'bDisconnect':'bConnect');
 }
 function connect(){
-  const user=$('tuser').value.trim().replace(/^@/,''),key=$('tkey').value.trim();
+  const user=tuser.value.trim().replace(/^@/,''),key=tkey.value.trim();
   if(!user||!key){conn.want=false;setConn('off','needKey');return;}
-  cfg.user=user;cfg.key=key;save();conn.want=true;clearTimeout(conn.retry);
+  saveCfg();conn.want=true;clearTimeout(conn.retry);
   if(conn.ws){try{conn.ws.close();}catch(e){}}
   let sock;
   try{sock=new WebSocket('wss://api.tik.tools?uniqueId='+encodeURIComponent(user)+'&apiKey='+encodeURIComponent(key));}
@@ -266,17 +560,15 @@ function connect(){
   sock.onmessage=m=>{
     if(conn.ws!==sock)return;
     let e;try{e=JSON.parse(m.data);}catch(x){return;}
-    const t=e&&e.event,d=(e&&e.data)||{};
-    conn.events++;
-    if(conn.events===1||conn.events%10===0)setConn('on','received',conn.events,t);
-    if(t==='gift')onGift(d);
-    else if(t==='error')log('TikTool: '+JSON.stringify(d).slice(0,90));
+    onLive(e);
   };
   sock.onerror=()=>{try{sock.close();}catch(e){}};
   sock.onclose=ev=>{
     if(conn.ws!==sock)return;
-    if(conn.want){setConn('retry','dropped',ev.code,ev.reason);conn.retry=setTimeout(connect,3000);}
-    else setConn('off','idle');
+    if(conn.want){
+      setConn('retry','dropped',ev.code,ev.reason);
+      conn.retry=setTimeout(connect,3000);
+    }else setConn('off','idle');
   };
 }
 function disconnect(){
@@ -284,108 +576,487 @@ function disconnect(){
   const s=conn.ws;conn.ws=null;if(s){try{s.close();}catch(e){}}
   setConn('off','idle');
 }
-$('conn').addEventListener('click',()=>{conn.want?disconnect():connect();});
+connBtn.addEventListener('click',()=>{conn.want?disconnect():connect();});
 
-/* ---------- slot list ---------- */
-function renderSlots(){
-  const box=$('slots');box.textContent='';
-  cfg.slots.forEach((s,i)=>{
-    const el=document.createElement('div');el.className='slot';
-    const top=document.createElement('div');top.className='top';
-    const t=document.createElement('span');t.textContent=L('gift',i+1);top.appendChild(t);
-    const rm=document.createElement('button');rm.type='button';rm.className='sm';rm.textContent=L('bRemove');
-    rm.addEventListener('click',async()=>{
-      if(cfg.slots.length<=1)return;
-      await DB.del(s.id);delete clips[s.id];cfg.slots.splice(i,1);save();renderSlots();
-    });
-    top.appendChild(rm);el.appendChild(top);
-    const inp=document.createElement('input');inp.type='text';inp.value=s.name||'';inp.placeholder=L('phGift');
-    inp.setAttribute('autocomplete','off');inp.setAttribute('list','gifts');inp.setAttribute('autocapitalize','off');
-    inp.addEventListener('input',()=>{s.name=inp.value;s.gid=null;save();});
-    el.appendChild(inp);
-    const row=document.createElement('div');row.className='row';
-    const ls=document.createElement('button');ls.type='button';ls.className='sm listen'+(learning===s.id?' on':'');
-    ls.textContent=L(learning===s.id?'bListening':'bListen');
-    ls.addEventListener('click',()=>{learning=learning===s.id?null:s.id;renderSlots();});
-    row.appendChild(ls);
-    const pick=document.createElement('label');pick.className='btn sm';
-    const ps=document.createElement('span');ps.textContent=L('bPick');pick.appendChild(ps);
-    const fi=document.createElement('input');fi.type='file';fi.accept='video/*';
-    fi.addEventListener('change',async()=>{
-      const f=fi.files&&fi.files[0];if(!f)return;
-      await DB.put(s.id,{name:f.name,blob:f});setClip(s.id,f);renderSlots();
-    });
-    pick.appendChild(fi);row.appendChild(pick);
-    const tb=document.createElement('button');tb.type='button';tb.className='sm';tb.textContent=L('bTest');
-    tb.addEventListener('click',()=>{
-      if(!started)startPlayback();
-      if(!clips[s.id]){log(L('noClip',i+1));return;}
-      enqueue(s.id,'Test',s.name||L('gift',i+1),1);
-    });
-    row.appendChild(tb);el.appendChild(row);
-    const fl=document.createElement('div');fl.className='file'+(clips[s.id]?' has':'');
-    fl.textContent=clips[s.id]?clips[s.id].name:L('noFile');el.appendChild(fl);
-    box.appendChild(el);
+const viewerName=d=>(d.user&&(d.user.nickname||d.user.uniqueId))||d.nickname||d.uniqueId||L('viewer');
+function teamForGift(name,id){
+  for(let i=0;i<TEAMS.length;i++){
+    const g=TEAMS[i].gift;
+    if(g.id!=null&&id!=null&&String(g.id)===String(id))return i;
+  }
+  const n=String(name||'').trim().toLowerCase();
+  if(n)for(let i=0;i<TEAMS.length;i++){
+    const g=TEAMS[i].gift;if(g.name&&g.name.trim().toLowerCase()===n)return i;
+  }
+  return -1;
+}
+const streaks=new Map(),unmappedSeen=new Map();
+setInterval(()=>{const now=performance.now();streaks.forEach((v,k)=>{if(now-v.t>8000)streaks.delete(k);});},2000);
+function onGift(d){
+  const gname=d.giftName||'',gid=d.giftId==null?null:d.giftId,who=nameOf(viewerName(d));
+  // learn mode: the next real gift is linked to the chosen country
+  if(state.learn>=0){
+    const i=state.learn;state.learn=-1;
+    setGift(i,gname,gid);log(L('learned',gname||gid,TEAMS[i].name));return;
+  }
+  const i=teamForGift(gname,gid);
+  if(i<0){
+    const k=gname||String(gid),now=performance.now();
+    if(now-(unmappedSeen.get(k)||0)>10000){unmappedSeen.set(k,now);log(L('unmapped',k));}
+    return;
+  }
+  // streak gifts arrive as growing frames: count only what is new. Other gifts arrive once with a quantity.
+  let n;
+  if(d.giftType===1||d.repeatEnd===false){
+    const key=who+'|'+(gid==null?gname:gid),rc=Math.max(1,d.repeatCount||1),prev=streaks.get(key);
+    n=prev&&rc>=prev.c?rc-prev.c:rc;
+    if(d.repeatEnd)streaks.delete(key);else streaks.set(key,{c:rc,t:performance.now()});
+  }else n=Math.max(1,d.repeatCount||1);
+  if(n>0)RaceAPI.giftToTeam(i,who,n);
+}
+function onLive(e){
+  const t=e&&e.event,d=(e&&e.data)||{};
+  conn.events++;
+  if(conn.events===1||conn.events%10===0)setConn('on','received',conn.events,t);
+  if(t==='chat')RaceAPI.comment(d.comment||'',viewerName(d));
+  else if(t==='like')RaceAPI.like(viewerName(d));
+  else if(t==='gift')onGift(d);
+  else if(t==='error')log('TikTool: '+JSON.stringify(d).slice(0,90));
+}
+
+/* ---------- drawing ---------- */
+const cv=document.getElementById('race'),g=cv.getContext('2d');
+function fit(){
+  const dpr=Math.min(window.devicePixelRatio||1,3),w=cv.clientWidth;
+  cv.width=Math.round(w*dpr);cv.height=Math.round(w*dpr*H/W);
+  g.setTransform(cv.width/W,0,0,cv.width/W,0,0);
+}
+window.addEventListener('resize',fit);
+
+function boat(x,y,team,b,t,i,isLead){
+  const racing=state.phase==='race';
+  const fast=Math.min(1,b.boost/6);
+  const sw=Math.sin(t*(racing?6+b.boost*0.5:1.4));  // all rowers stroke together
+  g.save();g.translate(x,y);
+  g.fillStyle='rgba(0,0,0,0.28)';g.beginPath();g.ellipse(2,10,42,4,0,0,7);g.fill();
+  if(b.pulse>0.02){
+    const gl=g.createRadialGradient(2,0,4,2,0,72);
+    gl.addColorStop(0,'rgba(255,180,58,'+(b.pulse*0.45)+')');gl.addColorStop(1,'rgba(255,180,58,0)');
+    g.fillStyle=gl;g.fillRect(-72,-62,156,124);
+  }
+  const len=24+fast*72+(racing?14:0);
+  const wg=g.createLinearGradient(-34,0,-34-len,0);
+  wg.addColorStop(0,'rgba(255,255,255,0.42)');wg.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=wg;g.beginPath();
+  g.moveTo(-34,5);g.lineTo(-34-len,1+Math.sin(t*3+i)*1);g.lineTo(-34-len,14);g.lineTo(-34,9);g.closePath();g.fill();
+  g.fillStyle='rgba(255,255,255,'+(0.25+fast*0.35)+')';
+  g.beginPath();g.ellipse(40,7,5+fast*7+Math.sin(t*10+i)*0.8,2.6+fast*1.2,0,0,7);g.fill();
+  const hg=g.createLinearGradient(0,-10,0,8);hg.addColorStop(0,'#b57a3c');hg.addColorStop(1,'#56321a');
+  g.fillStyle=hg;g.beginPath();
+  g.moveTo(-38,-12);g.quadraticCurveTo(-34,0,-18,7);g.lineTo(22,7);g.quadraticCurveTo(36,4,44,-14);
+  g.quadraticCurveTo(34,-2,22,-1);g.lineTo(-20,-1);g.quadraticCurveTo(-32,-2,-38,-12);g.fill();
+  g.strokeStyle='#ffcf6b';g.lineWidth=1.2;g.beginPath();
+  g.moveTo(-38,-12);g.quadraticCurveTo(-32,-2,-20,-1);g.lineTo(22,-1);g.quadraticCurveTo(34,-2,44,-14);g.stroke();
+  g.fillStyle='#ffcf6b';g.beginPath();g.arc(44,-14,2.2,0,7);g.arc(-38,-12,1.8,0,7);g.fill();
+  g.strokeStyle=team.c;g.lineWidth=2.4;g.beginPath();g.moveTo(-22,3.5);g.lineTo(24,3.5);g.stroke();
+  for(let k=0;k<7;k++){
+    const rx=-18+k*6;
+    g.fillStyle=team.c;g.fillRect(rx-1.7,-7+sw*0.8,3.4,6);
+    g.fillStyle='#f0c9a0';g.beginPath();g.arc(rx,-9+sw*0.8,2,0,7);g.fill();
+    g.strokeStyle='#e8d5a8';g.lineWidth=1.1;g.beginPath();g.moveTo(rx,-3);g.lineTo(rx-7+sw*8,10);g.stroke();
+  }
+  g.strokeStyle='#d9d2c4';g.lineWidth=1.4;g.beginPath();g.moveTo(24,-1);g.lineTo(24,-30);g.stroke();
+  g.save();g.translate(25,-30);
+  for(let s=0;s<12;s++){
+    g.save();g.translate(s*2,Math.sin(t*7+s*0.5+i)*1.2*(s/12+0.2));
+    g.beginPath();g.rect(0,0,2.1,15);g.clip();
+    drawFlag(g,team.id,-s*2,0,24,15);
+    g.restore();
+  }
+  g.restore();
+  if(isLead&&racing)star(g,37,-43+Math.sin(t*4)*1.2,5,'#ffcf6b');
+  g.restore();
+}
+
+function render(){
+  const t=state.t;
+  const order=state.boats.map((b,i)=>i).sort((a,b)=>state.boats[b].p-state.boats[a].p);
+  const gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,'#0e3447');gr.addColorStop(1,'#071e2b');
+  g.fillStyle=gr;g.fillRect(0,0,W,H);
+  const mg=g.createRadialGradient(W-60,TOP+30,0,W-60,TOP+30,190);
+  mg.addColorStop(0,'rgba(255,236,190,0.13)');mg.addColorStop(1,'rgba(255,236,190,0)');
+  g.fillStyle=mg;g.fillRect(0,TOP,W,H-TOP);
+  for(let i=0;i<6;i+=2){g.fillStyle='rgba(255,255,255,0.025)';g.fillRect(0,TOP+i*LANE,W,LANE);}
+  for(let k=0;k<34;k++){
+    let x=(k*131.7-state.cam*0.9)%W;if(x<0)x+=W;
+    const y=TOP+((k*53.3)%(6*LANE));
+    const a=0.08+0.22*(0.5+0.5*Math.sin(t*2+k));
+    g.fillStyle='rgba(255,255,255,'+a+')';g.fillRect(x,y,2.2,1);
+  }
+  for(let i=0;i<6;i++){
+    const y=TOP+i*LANE;
+    g.strokeStyle='rgba(255,255,255,0.07)';g.lineWidth=1;
+    g.beginPath();
+    for(let x=0;x<=W;x+=6){const yy=y+LANE*0.62+Math.sin((x+state.cam*0.9)*0.05-t*1.6+i)*1.6;x?g.lineTo(x,yy):g.moveTo(x,yy);}
+    g.stroke();
+    g.setLineDash([6,8]);g.strokeStyle='rgba(255,180,58,0.35)';g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();g.setLineDash([]);
+  }
+  g.strokeStyle='rgba(255,180,58,0.35)';g.beginPath();g.moveTo(0,TOP+6*LANE);g.lineTo(W,TOP+6*LANE);g.stroke();
+  g.textAlign='center';g.textBaseline='alphabetic';
+  for(let m=Math.ceil((state.cam-40)/100)*100;m<state.cam+VIEW+120;m+=100){
+    if(m<=0||m>=TRACK)continue;
+    const x=sx(m);if(x<START-10||x>W-8)continue;
+    const big=m%500===0;
+    g.strokeStyle=big?'rgba(255,180,58,0.55)':'rgba(255,255,255,0.14)';g.lineWidth=big?1.4:1;
+    g.setLineDash([3,6]);g.beginPath();g.moveTo(x,TOP);g.lineTo(x,TOP+6*LANE);g.stroke();g.setLineDash([]);
+    g.fillStyle=big?'rgba(255,180,58,0.9)':'rgba(231,240,241,0.45)';g.font=(big?'700 ':'400 ')+'10px Sarabun,sans-serif';
+    g.fillText(m+' '+L('unitM'),x,TOP+LANE*6-4);
+  }
+  g.textAlign='left';
+  const sl=sx(0)-44;
+  if(sl>-4){g.fillStyle='rgba(255,255,255,0.12)';g.fillRect(sl,TOP,2,6*LANE);}
+  const fx=sx(TRACK)+6;
+  if(fx<W+14){
+    const fg=g.createLinearGradient(fx-30,0,fx,0);fg.addColorStop(0,'rgba(255,180,58,0)');fg.addColorStop(1,'rgba(255,180,58,0.28)');
+    g.fillStyle=fg;g.fillRect(fx-30,TOP,30,6*LANE);
+    for(let k=0;k<12;k++){g.fillStyle=k%2?'#f4f5f8':'#101c24';g.fillRect(fx,TOP+k*LANE/2,6,LANE/2);g.fillStyle=k%2?'#101c24':'#f4f5f8';g.fillRect(fx+6,TOP+k*LANE/2,6,LANE/2);}
+  }
+  // lane labels: flag, gift icon, gift count, gift name; then the boat
+  TEAMS.forEach((tm,i)=>{
+    const y=laneY(i),b=state.boats[i];
+    drawFlag(g,tm.id,6,y-18,22,14);
+    g.strokeStyle='rgba(255,255,255,0.25)';g.lineWidth=0.8;g.strokeRect(6.4,y-17.6,21.2,13.2);
+    if(b.pulse>0.02){g.strokeStyle='rgba(255,180,58,'+b.pulse+')';g.lineWidth=1.6;g.beginPath();g.arc(17,y+9,10+(1-b.pulse)*8,0,7);g.stroke();}
+    drawGiftIcon(g,laneIcon(i),17,y+9,8,tm.c);
+    g.textAlign='left';g.textBaseline='alphabetic';
+    g.fillStyle='rgba(255,207,107,0.95)';g.font='700 10px Sarabun,sans-serif';
+    g.fillText(b.gifts,30,y+13,34);
+    g.fillStyle=tm.gift.name?'rgba(231,240,241,0.9)':'rgba(138,163,173,0.8)';g.font='500 9px Sarabun,sans-serif';
+    g.fillText(tm.gift.name||L('notSet'),6,y+28,42);
+    boat(boatX(i),y,tm,b,t,i,order[0]===i&&b.p>0.01);
+  });
+  state.drops.forEach(d=>{g.fillStyle='rgba(235,248,255,'+Math.max(0,d.life*0.75)+')';g.beginPath();g.arc(d.x,d.y,d.r,0,7);g.fill();});
+  state.fly.forEach(f=>{
+    const u=Math.min(1,f.t/f.dur),e=u*u*(3-2*u);
+    const x0=17,y0=laneY(f.i)+9,x1=boatX(f.i),y1=laneY(f.i)-14;
+    const x=x0+(x1-x0)*e,y=y0+(y1-y0)*e-Math.sin(Math.PI*u)*26;
+    g.fillStyle='rgba(255,180,58,0.25)';g.beginPath();g.arc(x,y,13,0,7);g.fill();
+    drawGiftIcon(g,f.giftId,x,y,9*(1-0.25*u),TEAMS[f.i].c);
+  });
+  state.sparks.forEach(s=>{g.globalAlpha=Math.max(0,s.life);g.fillStyle=s.c;g.beginPath();g.arc(s.x,s.y,s.r,0,7);g.fill();});
+  g.globalAlpha=1;
+  g.textAlign='center';g.textBaseline='alphabetic';g.font='700 12px Sarabun,sans-serif';
+  state.parts.forEach(p=>{
+    if(!p.text)return;
+    g.globalAlpha=Math.max(0,p.life);g.fillStyle=p.c;g.strokeStyle='rgba(0,0,0,0.55)';g.lineWidth=3;
+    g.strokeText(p.text,p.x,p.y);g.fillText(p.text,p.x,p.y);
+  });
+  g.globalAlpha=1;
+  g.fillStyle='rgba(231,240,241,0.6)';g.font='400 10px Sarabun,sans-serif';
+  g.fillText(L('goalLine',GOAL.toLocaleString('en-US')),W/2,H-3);
+  // leaderboard strip
+  const sg=g.createLinearGradient(0,0,0,TOP-4);sg.addColorStop(0,'#0d2a3a');sg.addColorStop(1,'#07151d');
+  g.fillStyle=sg;g.fillRect(0,0,W,TOP-4);
+  g.fillStyle='rgba(255,180,58,0.5)';g.fillRect(0,TOP-5,W,1);
+  const medal=[['#ffe08a','#d99a1c'],['#eef2f5','#9aa7b0'],['#e6a672','#a8672f']];
+  for(let r=0;r<3;r++){
+    const i=order[r],x=14+r*114;
+    const mgd=g.createLinearGradient(x,15,x,33);mgd.addColorStop(0,medal[r][0]);mgd.addColorStop(1,medal[r][1]);
+    g.fillStyle=mgd;g.beginPath();g.arc(x+9,24,9,0,7);g.fill();
+    g.fillStyle='#10202a';g.font='700 12px Sarabun,sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(r+1,x+9,25);
+    drawFlag(g,TEAMS[i].id,x+24,15,30,20);
+    g.strokeStyle='rgba(255,255,255,0.3)';g.lineWidth=0.8;g.strokeRect(x+24.4,15.4,29.2,19.2);
+    g.fillStyle='#e7f0f1';g.font='500 11px Sarabun,sans-serif';g.textAlign='left';
+    g.fillText(TEAMS[i].name,x+58,25,50);
+  }
+  // whole-course progress bar
+  g.fillStyle='rgba(255,255,255,0.14)';g.fillRect(14,43,W-28,3);
+  state.boats.forEach((b,i)=>{
+    const x=14+(W-28)*b.p;
+    g.fillStyle=TEAMS[i].c;g.strokeStyle='#f4f5f8';g.lineWidth=1;
+    g.beginPath();g.arc(x,44.5,3.4,0,7);g.fill();g.stroke();
+  });
+  // connection dot (top-right): green = receiving live events, red = reconnecting, grey = not connected
+  g.fillStyle=conn.state==='on'?'#5fd38a':conn.state==='retry'?'#ff8a7a':'rgba(138,163,173,0.6)';
+  g.beginPath();g.arc(W-8,8,3.2,0,7);g.fill();
+  g.textAlign='left';g.textBaseline='alphabetic';
+  if(state.phase==='countdown'){
+    g.fillStyle='rgba(4,12,18,0.55)';g.fillRect(0,TOP,W,H-TOP);
+    const n=Math.max(1,Math.ceil(state.cd)),since=n-state.cd;   // 0 at the start of each count, 1 at the end
+    g.textAlign='center';g.fillStyle='#ffb43a';
+    g.font='500 '+(96+Math.max(0,0.25-since)*160)+'px Mitr,Sarabun,sans-serif';
+    g.fillText(n,W/2,H/2+30);
+    g.fillStyle='#e7f0f1';g.font='500 16px Sarabun,sans-serif';
+    g.fillText(L('countdown'),W/2,H/2+64);
+    g.textAlign='left';
+  }
+  if(state.phase==='done'&&state.winner>=0){
+    g.fillStyle='rgba(4,12,18,0.72)';g.fillRect(0,TOP,W,H-TOP);
+    g.save();g.beginPath();g.rect(0,TOP,W,H-TOP);g.clip();
+    g.translate(W/2,H/2-50);
+    for(let k=0;k<12;k++){
+      g.save();g.rotate(t*0.3+k*Math.PI/6);
+      g.fillStyle='rgba(255,180,58,0.10)';g.beginPath();g.moveTo(0,0);g.lineTo(-26,-260);g.lineTo(26,-260);g.closePath();g.fill();
+      g.restore();
+    }
+    g.restore();
+    const w=TEAMS[state.winner];
+    drawFlag(g,w.id,W/2-45,H/2-80,90,60);
+    g.strokeStyle='#ffcf6b';g.lineWidth=2;g.strokeRect(W/2-45,H/2-80,90,60);
+    g.textAlign='center';g.fillStyle='#ffb43a';g.font='500 30px Mitr,Sarabun,sans-serif';
+    g.fillText(L('winner'),W/2,H/2);
+    g.fillStyle='#e7f0f1';g.font='500 22px Mitr,Sarabun,sans-serif';
+    g.fillText(w.name,W/2,H/2+36);
+    let best=null;state.supporters[state.winner].forEach((v,k)=>{if(!best||v>best[1])best=[k,v];});
+    g.font='400 14px Sarabun,sans-serif';g.fillStyle='#e7f0f1';
+    if(best)g.fillText(L('topSup',best[0]),W/2,H/2+64);
+    g.fillStyle='#8aa3ad';g.font='400 12px Sarabun,sans-serif';
+    g.fillText(L('nextRound',Math.ceil(state.doneT)),W/2,H/2+88);
+    g.textAlign='left';
+  }
+  state.confetti.forEach(c=>{
+    g.save();g.translate(c.x,c.y);g.rotate(c.rot);g.fillStyle=c.c;
+    g.fillRect(-c.w/2,-c.h/2,c.w,c.h*Math.abs(Math.cos(c.rot*2)+0.2));g.restore();
   });
 }
-$('addSlot').addEventListener('click',()=>{
-  let n=cfg.slots.length+1;while(cfg.slots.some(s=>s.id==='s'+n))n++;
-  cfg.slots.push({id:'s'+n,name:'',gid:null});save();renderSlots();
+
+/* ---------- loop ---------- */
+function rnd(a,b){return a+Math.random()*(b-a);}
+function spawnConfetti(teamIdx){
+  const cols=[TEAMS[teamIdx].c,'#ffcf6b','#ffffff','#7fd3ff','#ff8fb1'];
+  for(let k=0;k<150;k++)state.confetti.push({x:rnd(0,W),y:rnd(-H*0.6,-6),vx:rnd(-24,24),vy:rnd(50,120),rot:rnd(0,6),vr:rnd(-6,6),w:rnd(4,8),h:rnd(3,6),c:cols[k%cols.length]});
+}
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;state.t+=dt;
+  if(state.phase==='countdown'){
+    const n=Math.max(1,Math.ceil(state.cd));
+    if(n!==state.lastTick){state.lastTick=n;SFX.tick(n);}
+    state.cd-=dt;
+    if(state.cd<=0){state.phase='race';SFX.go();log(L('go'));}
+  }else if(state.phase==='race'){
+    state.boats.forEach((b,i)=>{
+      // Every boat creeps forward at the same slow rate, so the order still follows gifts.
+      // The creep alone can never reach the finish: only gifts get a boat past 98.5%.
+      b.drift+=DRIFT*dt;
+      const target=b.gifts>=GOAL?1:Math.min(0.985,(b.gifts+b.drift)/GOAL);
+      b.p+=(target-b.p)*Math.min(1,dt*2.5);   // glide to the target
+      b.boost*=Math.exp(-dt/1.2);
+      if(b.gifts>=GOAL&&b.p>=0.998&&state.winner<0){b.p=1;state.winner=i;}
+      const rate=3+b.boost*4;
+      if(Math.random()<rate*dt&&state.drops.length<240){
+        state.drops.push({x:boatX(i)+40,y:laneY(i)+6,vx:rnd(-14,26),vy:rnd(-62,-30),life:1,r:rnd(0.8,1.8)});
+      }
+    });
+    let lead=0;state.boats.forEach((b,i)=>{if(b.p>state.boats[lead].p)lead=i;});
+    if(state.boats[lead].p>0.04){
+      if(state.leader>=0&&lead!==state.leader){SFX.lead();log(L('leads',TEAMS[lead].name));}
+      state.leader=lead;
+    }
+    if(state.winner>=0){
+      state.phase='done';state.doneT=8;state.wins[state.winner]++;
+      log(L('winLog',TEAMS[state.winner].name));renderBoard();
+      spawnConfetti(state.winner);SFX.win();
+    }
+  }else if(state.phase==='done'){
+    state.doneT-=dt;if(state.doneT<=0)resetRace();
+  }
+  const leadM=Math.max(...state.boats.map(b=>b.p))*TRACK;
+  SFX.mood(state.phase==='race'?0.2+0.8*(leadM/TRACK):state.phase==='done'?0.6:0.1);
+  const camTarget=Math.min(TRACK-VIEW,Math.max(0,leadM-VIEW*0.62));
+  state.cam+=(camTarget-state.cam)*Math.min(1,dt*4);
+  state.boats.forEach(b=>{b.pulse=Math.max(0,b.pulse-dt*2.2);});
+  state.parts.forEach(p=>{p.y+=p.vy*dt;p.life-=dt*0.9;});
+  state.parts=state.parts.filter(p=>p.life>0);
+  state.drops.forEach(d=>{d.vy+=150*dt;d.x+=d.vx*dt;d.y+=d.vy*dt;d.life-=dt*1.7;});
+  state.drops=state.drops.filter(d=>d.life>0);
+  state.fly.forEach(f=>{
+    f.t+=dt;
+    if(f.t>=f.dur&&!f.done){
+      f.done=true;
+      const x=boatX(f.i),y=laneY(f.i)-14;
+      for(let k=0;k<f.n;k++){const a=rnd(0,6.283),s=rnd(30,90);
+        state.sparks.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-20,life:1,r:rnd(1,2.4),c:k%3===0?'#ffffff':(k%3===1?'#ffcf6b':TEAMS[f.i].c)});}
+    }
+  });
+  state.fly=state.fly.filter(f=>!f.done);
+  state.sparks.forEach(s=>{s.vy+=120*dt;s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt*1.5;});
+  state.sparks=state.sparks.filter(s=>s.life>0).slice(-400);
+  state.confetti.forEach(c=>{c.x+=c.vx*dt;c.y+=c.vy*dt;c.rot+=c.vr*dt;});
+  state.confetti=state.confetti.filter(c=>c.y<H+20);
+  render();requestAnimationFrame(frame);
+}
+
+/* ---------- UI ---------- */
+const teamsEl=document.getElementById('teams'),chipSpans=[];
+const vname=document.getElementById('vname');
+TEAMS.forEach((tm,i)=>{
+  const btn=document.createElement('button');btn.type='button';btn.className='team';btn.setAttribute('aria-pressed','false');
+  const c=document.createElement('canvas');c.width=52;c.height=34;
+  drawFlag(c.getContext('2d'),tm.id,0,0,52,34);
+  const s=document.createElement('span');s.textContent=tm.name;chipSpans.push(s);
+  btn.append(c,s);
+  btn.addEventListener('click',()=>RaceAPI.comment(tm.name,vname.value));
+  teamsEl.appendChild(btn);
+});
+function syncChips(){
+  const i=state.viewers.get(nameOf(vname.value));
+  [...teamsEl.children].forEach((el,k)=>el.setAttribute('aria-pressed',k===i));
+}
+vname.addEventListener('input',()=>{vname.dataset.custom='1';syncChips();});
+
+let qty=1;
+const qtyEl=document.getElementById('qty');
+[1,5,10,50].forEach(n=>{
+  const b=document.createElement('button');b.type='button';b.className='tool';b.textContent='x'+n;
+  b.setAttribute('aria-pressed',n===qty);
+  b.addEventListener('click',()=>{qty=n;[...qtyEl.children].forEach(el=>el.setAttribute('aria-pressed',el===b));});
+  qtyEl.appendChild(b);
+});
+const giftsEl=document.getElementById('gifts'),giftEls=[];
+TEAMS.forEach(tm=>{
+  const btn=document.createElement('button');btn.type='button';btn.className='gift';
+  const c=document.createElement('canvas');c.width=60;c.height=60;
+  drawGiftIcon(c.getContext('2d'),tm.icon,30,30,26);
+  const nm=document.createElement('span');nm.textContent=tm.tname;
+  const to=document.createElement('small');to.textContent='→ '+tm.name;
+  giftEls.push({nm,to});
+  btn.append(c,nm,to);
+  btn.addEventListener('click',()=>RaceAPI.gift(vname.value,tm.icon,qty));
+  giftsEl.appendChild(btn);
+});
+document.getElementById('cform').addEventListener('submit',e=>{
+  e.preventDefault();const inp=document.getElementById('cin');
+  if(inp.value.trim())RaceAPI.comment(inp.value.trim(),vname.value);inp.value='';
 });
 
-/* ---------- idle video + options ---------- */
-$('idleFile').addEventListener('change',async e=>{
-  const f=e.target.files&&e.target.files[0];if(!f)return;
-  await DB.put('idle',{name:f.name,blob:f});setClip('idle',f);renderIdle();applyIdle();
+/* gift mapping rows */
+const mapEl=document.getElementById('map'),mapRows=[];
+function setGift(i,name,id){
+  name=String(name||'').trim();
+  TEAMS.forEach((t,k)=>{ // one gift per country
+    if(k!==i&&((id!=null&&t.gift.id!=null&&String(t.gift.id)===String(id))||(name&&t.gift.name.toLowerCase()===name.toLowerCase())))t.gift={name:'',id:null};
+  });
+  TEAMS[i].gift={name,id:id==null?null:id};
+  saveCfg();refreshMap();renderBoard();
+}
+function refreshMap(){
+  mapRows.forEach((r,i)=>{
+    if(document.activeElement!==r.inp)r.inp.value=TEAMS[i].gift.name;
+    const on=state.learn===i;
+    r.btn.textContent=L(on?'mapWait':'mapListen');r.btn.setAttribute('aria-pressed',on);
+  });
+}
+TEAMS.forEach((tm,i)=>{
+  const r=document.createElement('div');r.className='mrow';
+  const c=document.createElement('canvas');c.width=52;c.height=34;
+  drawFlag(c.getContext('2d'),tm.id,0,0,52,34);
+  const inp=document.createElement('input');inp.type='text';inp.placeholder=L('phGift',tm.name);
+  inp.setAttribute('aria-label',L('phGift',tm.name));inp.autocomplete='off';inp.spellcheck=false;
+  inp.addEventListener('change',()=>setGift(i,inp.value,null));
+  const btn=document.createElement('button');btn.type='button';btn.className='tool';btn.setAttribute('aria-pressed','false');
+  btn.addEventListener('click',()=>{
+    state.learn=state.learn===i?-1:i;
+    if(state.learn>=0)log(L('learnPrompt',tm.name));
+    refreshMap();
+  });
+  r.append(c,inp,btn);mapEl.appendChild(r);mapRows.push({inp,btn});
 });
-$('idleClear').addEventListener('click',async()=>{
-  await DB.del('idle');if(clips.idle){URL.revokeObjectURL(clips.idle.url);delete clips.idle;}
-  renderIdle();applyIdle();
-});
-function renderIdle(){const n=$('idleName');n.textContent=clips.idle?clips.idle.name:L('noFile');n.className='file'+(clips.idle?' has':'');}
-$('optIdleSound').addEventListener('change',e=>{cfg.idleSound=e.target.checked;save();applyIdle();});
-$('optFill').addEventListener('change',e=>{cfg.fill=e.target.checked;save();document.body.classList.toggle('fit',!cfg.fill);});
+refreshMap();
 
-/* ---------- live mode ---------- */
-let wake=null,fabT=null;
-async function keepAwake(){try{if(navigator.wakeLock&&document.visibilityState==='visible')wake=await navigator.wakeLock.request('screen');}catch(e){}}
+/* standings */
+const boardEl=document.getElementById('board');
+TEAMS.forEach(tm=>{
+  const r=document.createElement('div');r.className='brow';
+  const c=document.createElement('canvas');c.width=52;c.height=34;
+  drawFlag(c.getContext('2d'),tm.id,0,0,52,34);
+  const mid=document.createElement('div');mid.style.minWidth='0';
+  mid.innerHTML='<div class="n"></div><div class="s"></div>';
+  const w=document.createElement('div');w.className='w';
+  r.append(c,mid,w);boardEl.appendChild(r);
+});
+function renderBoard(){
+  [...boardEl.children].forEach((r,i)=>{
+    let best=null;state.supporters[i].forEach((v,k)=>{if(!best||v>best[1])best=[k,v];});
+    r.children[1].children[0].textContent=L('boardRow',TEAMS[i].name,TEAMS[i].gift.name||L('noGift'),state.wins[i]);
+    r.children[1].children[1].textContent=best?L('sup1',best[0],Math.round(best[1])):L('noSup');
+    r.children[2].textContent=state.boats[i].gifts+'/'+GOAL;
+  });
+}
+
+document.getElementById('reset').addEventListener('click',()=>{resetRace();log(L('newRound'));});
+
+/* live mode: hides the controls and keeps the screen awake */
+let wake=null;
+async function keepAwake(){
+  try{if(navigator.wakeLock&&document.visibilityState==='visible')wake=await navigator.wakeLock.request('screen');}catch(e){}
+}
 document.addEventListener('visibilitychange',()=>{if(document.body.classList.contains('live'))keepAwake();});
-function goFull(){try{const r=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen({navigationUI:'hide'});if(r&&r.catch)r.catch(()=>{});}catch(e){}}
-function leaveFull(){try{if(document.fullscreenElement){const r=document.exitFullscreen();if(r&&r.catch)r.catch(()=>{});}}catch(e){}}
-$('live').addEventListener('click',()=>{startPlayback();document.body.classList.add('live');keepAwake();goFull();});
-$('full').addEventListener('click',()=>{document.fullscreenElement?leaveFull():goFull();});
-$('stop').addEventListener('click',stopPlayback);
-$('exit').addEventListener('click',()=>{
-  document.body.classList.remove('live','showfab');leaveFull();
+// In live mode the buttons stay hidden so viewers never see them. Tap the screen once to show them for 4 seconds.
+let fabTimer=null;
+function showFab(){
+  if(!document.body.classList.contains('live'))return;
+  document.body.classList.add('showfab');clearTimeout(fabTimer);
+  fabTimer=setTimeout(()=>document.body.classList.remove('showfab'),4000);
+}
+document.addEventListener('pointerdown',showFab);
+document.getElementById('live').addEventListener('click',()=>{document.body.classList.add('live');setTimeout(fit,0);keepAwake();});
+document.getElementById('exit').addEventListener('click',()=>{
+  document.body.classList.remove('live','showfab');setTimeout(fit,0);
   try{if(wake){wake.release();wake=null;}}catch(e){}
 });
-$('skip').addEventListener('click',()=>{if(playing)endClip();});
-$('stage').addEventListener('click',()=>{
-  if(!document.body.classList.contains('live'))return;
-  document.body.classList.add('showfab');clearTimeout(fabT);
-  fabT=setTimeout(()=>document.body.classList.remove('showfab'),4000);
+
+const sndBtns=[document.getElementById('snd'),document.getElementById('sndlive')];
+const musBtns=[document.getElementById('mus'),document.getElementById('muslive')];
+function syncSnd(){
+  sndBtns.forEach(b=>{b.textContent=L(SFX.on?'soundOn':'soundOff');b.setAttribute('aria-pressed',SFX.on);});
+  musBtns.forEach(b=>{b.textContent=L(SFX.music?'musOn':'musOff');b.setAttribute('aria-pressed',SFX.music);});
+}
+sndBtns.forEach(b=>b.addEventListener('click',()=>{SFX.set(!SFX.on);syncSnd();}));
+musBtns.forEach(b=>b.addEventListener('click',()=>{SFX.setMusic(!SFX.music);syncSnd();}));
+
+const autoBtn=document.getElementById('auto');
+function renderAuto(){autoBtn.textContent=L(state.auto?'autoOn':'autoOff');autoBtn.setAttribute('aria-pressed',!!state.auto);}
+const fakeViewers=Array.from({length:40},(_,i)=>'Viewer'+(101+i));
+autoBtn.addEventListener('click',()=>{
+  if(state.auto){clearInterval(state.auto);state.auto=null;renderAuto();return;}
+  state.auto=setInterval(()=>{
+    const who=fakeViewers[Math.floor(Math.random()*fakeViewers.length)];
+    if(!state.viewers.has(who)||Math.random()<0.04){
+      RaceAPI.comment(TEAMS[Math.floor(Math.random()*6)].name,who);return;
+    }
+    const r=Math.random();
+    if(r<0.15){RaceAPI.like(who);return;}
+    const tm=TEAMS[Math.floor(Math.random()*6)];
+    const q=Math.random();
+    RaceAPI.gift(who,tm.icon,q<0.6?1:q<0.85?5:q<0.97?10:30);
+  },110);
+  renderAuto();
 });
 
-/* ---------- language ---------- */
+// installable app: the service worker keeps the page openable offline
+if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){
+  window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});
+}
+// language: redraws every piece of text that is not drawn on the canvas each frame
+const langBtn=document.getElementById('lang');
 function applyLang(){
   document.documentElement.lang=LANG;document.title=L('title');
   document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=L(el.dataset.i18n);});
   document.querySelectorAll('[data-i18n-ph]').forEach(el=>{el.placeholder=L(el.dataset.i18nPh);});
-  $('lang').textContent=LANG==='en'?'ภาษาไทย':'English';
-  renderConn();renderIdle();renderSlots();
+  document.querySelectorAll('[data-i18n-aria]').forEach(el=>{el.setAttribute('aria-label',L(el.dataset.i18nAria));});
+  if(!vname.dataset.custom)vname.value=L('me');
+  chipSpans.forEach((sp,i)=>{sp.textContent=TEAMS[i].name;});
+  giftEls.forEach((e,i)=>{e.nm.textContent=TEAMS[i].tname;e.to.textContent='→ '+TEAMS[i].name;});
+  mapRows.forEach((r,i)=>{const ph=L('phGift',TEAMS[i].name);r.inp.placeholder=ph;r.inp.setAttribute('aria-label',ph);});
+  langBtn.textContent=L('langBtn');
+  refreshMap();renderBoard();syncSnd();renderConn();renderAuto();syncChips();
 }
-$('lang').addEventListener('click',()=>{LANG=LANG==='en'?'th':'en';save();applyLang();});
+langBtn.addEventListener('click',()=>{LANG=LANG==='en'?'th':'en';saveCfg();applyLang();});
 
-/* ---------- start ---------- */
-$('tuser').value=cfg.user||'';$('tkey').value=cfg.key||'';
-$('optIdleSound').checked=!!cfg.idleSound;$('optFill').checked=cfg.fill!==false;
-document.body.classList.toggle('fit',cfg.fill===false);
-setConn('off','idle');applyLang();
-loadClips().then(()=>{renderIdle();renderSlots();applyIdle();log(L('ready'));});
-if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-}
-window.GV={onGift,enqueue,get playing(){return playing;},get queue(){return queue.length;}};
+fit();resetRace();setConn('off','idle');applyLang();
+log(L('ready'));
+requestAnimationFrame(frame);
 </script>
 </body>
 </html>
