@@ -38,9 +38,18 @@ label.chk input{width:22px;height:22px}
 .stage{position:relative;background:#000;border:1px solid var(--line);border-radius:14px;overflow:hidden;aspect-ratio:9/16;max-height:52vh;margin:0 auto}
 .stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
 body.fit .stage video{object-fit:contain}
-#vClip{opacity:0;pointer-events:none}
+#vClip{opacity:0;pointer-events:none;transition:opacity .5s ease}
 #vClip.on{opacity:1}
 .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--mut);font-size:14px}
+#gpick{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.72);display:none;align-items:flex-end;justify-content:center}
+#gpick.on{display:flex}
+#gpick .box{background:var(--panel);border:1px solid var(--line);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:86vh;display:flex;flex-direction:column;padding:12px}
+#gpick .bar{display:flex;gap:8px;margin-bottom:8px}
+#gpick .bar input{margin:0;flex:1}
+#gpick .grid{overflow:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding-bottom:12px}
+#gpick .g{min-height:96px;padding:6px 2px;flex-direction:column;gap:4px;font-size:11px;line-height:1.2;text-align:center;word-break:break-word;background:#0a1a24}
+#gpick .g img{width:52px;height:52px;object-fit:contain}
+#gpick .g small{color:var(--acc)}
 #toast{position:absolute;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));text-align:center;font-weight:700;text-shadow:0 2px 6px #000;opacity:0;transition:opacity .25s;pointer-events:none}
 #toast.on{opacity:1}
 .fab{position:fixed;z-index:20;top:max(8px,env(safe-area-inset-top));display:none;opacity:0;pointer-events:none;transition:opacity .25s;background:rgba(8,22,30,.85)}
@@ -95,6 +104,20 @@ body.live .stage{position:fixed;inset:0;max-height:none;aspect-ratio:auto;border
   </section>
 
   <section class="ui">
+    <h2 data-i18n="hMusic">Background music (mp3)</h2>
+    <div class="row">
+      <label class="btn sm"><span data-i18n="bAddMusic">Add mp3 files</span><input type="file" id="musicFile" accept="audio/*,.mp3,.m4a,.wav,.ogg" multiple></label>
+      <button class="sm" id="mPlay" type="button" data-i18n="bMPlay">Play</button>
+      <button class="sm" id="mNext" type="button" data-i18n="bMNext">Next</button>
+    </div>
+    <div id="mList" style="margin-top:8px"></div>
+    <label class="chk"><span data-i18n="oVol">Volume</span><input type="range" id="mVol" min="0" max="100" step="1" style="flex:1;width:auto;height:auto"></label>
+    <label class="chk"><input type="checkbox" id="optDuck" checked><span data-i18n="oDuck">Lower the music while a gift clip plays</span></label>
+    <label class="chk"><input type="checkbox" id="optMAuto" checked><span data-i18n="oMAuto">Start the music with live mode</span></label>
+    <p class="note" data-i18n="mNote">Songs play one after another and repeat. Use music you have the right to play on TikTok LIVE, or TikTok may mute or restrict the live.</p>
+  </section>
+
+  <section class="ui">
     <h2 data-i18n="hSlots">Gifts and their clips</h2>
     <p class="note" data-i18n="slotNote">Tap Listen, then send that gift once in your LIVE and the game remembers it. Or type the gift name exactly as TikTok shows it. One gift = one clip, played once, then the loop continues.</p>
     <div id="slots"></div>
@@ -116,6 +139,7 @@ body.live .stage{position:fixed;inset:0;max-height:none;aspect-ratio:auto;border
   </section>
 </div>
 
+<div id="gpick"><div class="box"><div class="bar"><input type="text" id="gsearch" data-i18n-ph="phSearch" autocomplete="off" autocapitalize="off"><button type="button" id="gclose" data-i18n="bClose">Close</button></div><div class="grid" id="ggrid"></div></div></div>
 <script src="gift-icons.js"></script>
 <datalist id="gifts"><option value="GG"><option value="Heart"><option value="Heart Me"><option value="Ice Cream Cone"><option value="Love you"><option value="Rose"><option value="Thumbs Up"><option value="TikTok"><option value="Team Bracelet"><option value="Finger Heart"><option value="Cheer You Up"><option value="Friendship Necklace"><option value="Rosa"><option value="Perfume"><option value="Doughnut"><option value="Bubble Gum"><option value="Cap"><option value="Hat and Mustache"><option value="Level-up Sparks"><option value="Like-Pop"><option value="Little Crown"><option value="Love Painting"><option value="Paper Crane"><option value="Confetti"><option value="Marvelous Confetti"><option value="Cheer For You"><option value="Cheering Crab"><option value="Coffee Magic"><option value="Garland Headpiece"><option value="Hearts"><option value="Love You"><option value="Pinch Face"><option value="Butterfly for You"><option value="Corgi"><option value="Fruit Friends"><option value="Naughty Chicken"><option value="Play for You"><option value="Forever Rosa"><option value="Jollie the Joy Bean"><option value="Magic Rhythm"><option value="Relaxed Goose"><option value="Rocky the Rock Bean"><option value="Rosie the Rose Bean"><option value="Sage the Smart Bean"><option value="Tom's Hug"><option value="Beating Heart"><option value="Coral"><option value="Hands Up"><option value="DJ Glasses"><option value="Dragon Crown"><option value="Gem Gun"><option value="Money Gun"><option value="VR Goggles"><option value="You're Amazing"><option value="Swan"><option value="Train"><option value="Lucky Airdrop Box"><option value="Travel with You"><option value="Trending Figure"><option value="Galaxy"><option value="Shiny Air Balloon"><option value="Fireworks"></datalist>
 <script>
@@ -128,7 +152,7 @@ en:{title:'Gift Video Player',tag:'Loops a video. Each gift plays its own clip.'
  hIdle:'Looping video (plays all the time)',bPick:'Pick video',bClear:'Remove',noFile:'No video chosen',
  hSlots:'Gifts and their clips',slotNote:'Tap Listen, then send that gift once in your LIVE and the game remembers it. Or type the gift name exactly as TikTok shows it. One gift = one clip, played once, then the loop continues.',
  bAdd:'+ Add gift',gift:n=>'Gift '+n,phGift:'Gift name (e.g. Rose)',bListen:'Listen',bListening:'Send the gift…',bTest:'Test',bRemove:'Remove',
- hOpt:'Options',oIdleSound:'Play sound from the looping video',oFill:'Fill the screen (crop edges)',bLive:'Start live mode',bStop:'Stop playing',bFull:'Fullscreen',
+ hMusic:'Background music (mp3)',bAddMusic:'Add mp3 files',bMPlay:'Play',bMPause:'Pause',bMNext:'Next',oVol:'Volume',oDuck:'Lower the music while a gift clip plays',oMAuto:'Start the music with live mode',mNote:'Songs play one after another and repeat. Use music you have the right to play on TikTok LIVE, or TikTok may mute or restrict the live.',noMusic:'No songs yet',nowPlay:'Now playing',bChoose:'Choose gift',bClose:'Close',phSearch:'Search gift name',noMatch:'No gift matches',hOpt:'Options',oIdleSound:'Play sound from the looping video',oFill:'Fill the screen (crop edges)',bLive:'Start live mode',bStop:'Stop playing',bFull:'Fullscreen',
  liveNote:'Live mode hides the controls. Tap the screen to show Skip and Exit for 4 seconds. Keep this page open and the screen on.',
  hLog:'Log',bSkip:'Skip clip',bExit:'Exit live mode',bDock:'Hide buttons',bDockShow:'Show buttons',bImg:'Pick image',phLabel:'Label on the button (e.g. Hello)',oDock:'Show gift buttons on the right side in live mode',
  you:'You',learned:(g,n)=>'Linked gift "'+g+'" to slot '+n,unmapped:g=>'Gift "'+g+'" has no clip yet',noClip:n=>'Slot '+n+' has no video yet',
@@ -140,14 +164,14 @@ th:{title:'เครื่องเล่นวิดีโอตามของ
  hIdle:'วิดีโอวนลูป (เล่นตลอด)',bPick:'เลือกวิดีโอ',bClear:'ลบ',noFile:'ยังไม่ได้เลือกวิดีโอ',
  hSlots:'ของขวัญและคลิปของมัน',slotNote:'กด "ฟัง" แล้วส่งของขวัญนั้นในไลฟ์ 1 ครั้ง ระบบจะจำให้ หรือพิมพ์ชื่อของขวัญตามที่ TikTok แสดง ของขวัญ 1 ชิ้น = 1 คลิป เล่นครั้งเดียวแล้วกลับไปวนลูป',
  bAdd:'+ เพิ่มของขวัญ',gift:n=>'ของขวัญ '+n,phGift:'ชื่อของขวัญ (เช่น Rose)',bListen:'ฟัง',bListening:'ส่งของขวัญเลย…',bTest:'ทดสอบ',bRemove:'ลบ',
- hOpt:'ตัวเลือก',oIdleSound:'เปิดเสียงจากวิดีโอวนลูป',oFill:'เต็มจอ (ตัดขอบ)',bLive:'เริ่มโหมดไลฟ์',bStop:'หยุดเล่น',bFull:'เต็มจอ',
+ hMusic:'เพลงพื้นหลัง (mp3)',bAddMusic:'เพิ่มไฟล์ mp3',bMPlay:'เล่น',bMPause:'หยุดชั่วคราว',bMNext:'เพลงถัดไป',oVol:'ระดับเสียง',oDuck:'ลดเสียงเพลงตอนคลิปของขวัญเล่น',oMAuto:'เริ่มเพลงพร้อมโหมดไลฟ์',mNote:'เพลงจะเล่นต่อกันไปและวนซ้ำ ใช้เพลงที่คุณมีสิทธิ์เปิดในไลฟ์ TikTok ไม่เช่นนั้น TikTok อาจปิดเสียงหรือจำกัดไลฟ์',noMusic:'ยังไม่มีเพลง',nowPlay:'กำลังเล่น',bChoose:'เลือกของขวัญ',bClose:'ปิด',phSearch:'ค้นหาชื่อของขวัญ',noMatch:'ไม่พบของขวัญ',hOpt:'ตัวเลือก',oIdleSound:'เปิดเสียงจากวิดีโอวนลูป',oFill:'เต็มจอ (ตัดขอบ)',bLive:'เริ่มโหมดไลฟ์',bStop:'หยุดเล่น',bFull:'เต็มจอ',
  liveNote:'โหมดไลฟ์จะซ่อนปุ่ม แตะหน้าจอเพื่อแสดงปุ่มข้ามคลิปและออก 4 วินาที เปิดหน้านี้ค้างไว้และอย่าให้จอดับ',
  hLog:'บันทึก',bSkip:'ข้ามคลิป',bExit:'ออกจากโหมดไลฟ์',bDock:'ซ่อนปุ่ม',bDockShow:'แสดงปุ่ม',bImg:'เลือกรูป',phLabel:'ข้อความบนปุ่ม (เช่น Hello)',oDock:'แสดงปุ่มของขวัญด้านขวาในโหมดไลฟ์',
  you:'คุณ',learned:(g,n)=>'ผูกของขวัญ "'+g+'" กับช่อง '+n,unmapped:g=>'ของขวัญ "'+g+'" ยังไม่มีคลิป',noClip:n=>'ช่อง '+n+' ยังไม่มีวิดีโอ',
  queued:(w,g,n)=>w+' · '+g+(n>1?' ×'+n:''),dropQ:n=>'ข้าม '+n+' คลิป เพราะคิวเต็ม',ready:'พร้อม',stopped:'หยุดแล้ว'}
 };
 const KEY='giftvideo.cfg.v1';
-let cfg={user:'',key:'',lang:'en',idleSound:false,fill:true,dock:true,slots:[]};
+let cfg={user:'',key:'',lang:'en',idleSound:false,fill:true,dock:true,music:[],mvol:60,duck:true,mauto:true,slots:[]};
 try{Object.assign(cfg,JSON.parse(localStorage.getItem(KEY)||'{}'));}catch(e){}
 if(!Array.isArray(cfg.slots)||!cfg.slots.length)cfg.slots=Array.from({length:6},(_,i)=>({id:'s'+(i+1),name:'',gid:null}));
 let LANG=cfg.lang==='th'?'th':'en';
@@ -175,6 +199,7 @@ function iconFor(s){return imgs[s.id]||(window.GIFT_ICONS&&window.GIFT_ICONS[nor
 async function loadClips(){
   await DB.open();
   for(const s of cfg.slots){const r=await DB.get('img_'+s.id);if(r&&r.blob)imgs[s.id]=URL.createObjectURL(r.blob);}
+  await loadMusic();
   for(const k of ['idle',...cfg.slots.map(s=>s.id)]){
     const r=await DB.get(k);if(r&&r.blob)setClip(k,r.blob.name?r.blob:new File([r.blob],r.name||'video',{type:r.blob.type}));
     if(r&&r.name&&clips[k])clips[k].name=r.name;
@@ -200,20 +225,44 @@ function applyIdle(){
   if(started&&c)vIdle.play().catch(()=>{});
 }
 function say(t){toast.textContent=t;toast.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>toast.classList.remove('on'),3000);}
-function endClip(){
-  clearTimeout(guard);
-  vClip.classList.remove('on');vClip.pause();vClip.removeAttribute('src');vClip.load();
-  playing=false;cur=null;applyIdle();pump();
+const FADE=500;      // ms: the gift clip melts into the loop and back, like a mixed edit
+let fadeT=null,fadingOut=false;
+function rampVol(to,ms){
+  clearInterval(fadeT);
+  const from=vClip.volume,t0=performance.now();
+  if(vClip.muted||ms<=0){try{vClip.volume=to;}catch(e){}return;}
+  fadeT=setInterval(()=>{
+    const k=Math.min(1,(performance.now()-t0)/ms);
+    try{vClip.volume=Math.max(0,Math.min(1,from+(to-from)*k));}catch(e){}
+    if(k>=1)clearInterval(fadeT);
+  },40);
 }
+function fadeOutClip(){
+  if(fadingOut)return;fadingOut=true;
+  vClip.classList.remove('on');rampVol(0,FADE);
+}
+function endClip(){
+  clearTimeout(guard);clearInterval(fadeT);fadingOut=false;
+  vClip.classList.remove('on');vClip.pause();vClip.removeAttribute('src');vClip.load();
+  playing=false;cur=null;applyIdle();pump();if(!playing)musicDuck(false);
+}
+vClip.addEventListener('timeupdate',()=>{
+  if(!playing||fadingOut||queue.length)return;
+  const d=vClip.duration;
+  if(d&&isFinite(d)&&d>1.2&&d-vClip.currentTime<=FADE/1000+0.05)fadeOutClip();
+});
 function pump(){
   if(playing||!queue.length)return;
   const it=queue.shift(),c=clips[it.id];
   if(!c){pump();return;}
-  playing=true;cur=it;vIdle.muted=true;
+  playing=true;cur=it;vIdle.muted=true;musicDuck(true);
+  fadingOut=false;clearInterval(fadeT);
   vClip.src=c.url;vClip.muted=false;vClip.currentTime=0;
-  vClip.classList.add('on');
+  try{vClip.volume=0;}catch(e){}
   guard=setTimeout(endClip,10*60*1000);
-  vClip.play().catch(()=>{vClip.muted=true;vClip.play().catch(endClip);});
+  const show=()=>{if(playing&&cur===it){vClip.classList.add('on');rampVol(1,FADE);}};
+  vClip.addEventListener('playing',show,{once:true});
+  vClip.play().catch(()=>{vClip.muted=true;vClip.play().then(show).catch(endClip);});
 }
 vClip.addEventListener('ended',endClip);
 vClip.addEventListener('error',()=>{if(playing)endClip();});
@@ -221,11 +270,11 @@ function enqueue(id,who,gname,n){
   let dropped=0;
   for(let k=0;k<n;k++){if(queue.length>=MAXQ)dropped++;else queue.push({id,who,gname});}
   if(dropped)log(L('dropQ',dropped));
-  if(n>dropped)say(L('queued',who,gname,n-dropped));
+  if(n>dropped)log(L('queued',who,gname,n-dropped));
   pump();
 }
 function startPlayback(){started=true;applyIdle();}
-function stopPlayback(){started=false;queue.length=0;if(playing)endClip();vIdle.pause();log(L('stopped'));}
+function stopPlayback(){started=false;queue.length=0;if(playing)endClip();vIdle.pause();musicPause();log(L('stopped'));}
 
 /* ---------- gift to clip mapping ---------- */
 const slotNo=id=>cfg.slots.findIndex(s=>s.id===id)+1;
@@ -317,7 +366,7 @@ function renderSlots(){
     });
     top.appendChild(rm);el.appendChild(top);
     const inp=document.createElement('input');inp.type='text';inp.value=s.name||'';inp.placeholder=L('phGift');
-    inp.setAttribute('autocomplete','off');inp.setAttribute('list','gifts');inp.setAttribute('autocapitalize','off');
+    inp.setAttribute('autocomplete','off');inp.name='gn'+Math.random().toString(36).slice(2);inp.setAttribute('autocapitalize','off');
     inp.addEventListener('input',()=>{s.name=inp.value;s.gid=null;save();});
     inp.addEventListener('change',()=>renderSlots());
     el.appendChild(inp);
@@ -326,6 +375,9 @@ function renderSlots(){
     lab.addEventListener('input',()=>{s.label=lab.value;save();renderDock();});
     el.appendChild(lab);
     const row=document.createElement('div');row.className='row';
+    const ch=document.createElement('button');ch.type='button';ch.className='sm';ch.textContent=L('bChoose');
+    ch.addEventListener('click',()=>openPicker(s));
+    row.appendChild(ch);
     const ls=document.createElement('button');ls.type='button';ls.className='sm listen'+(learning===s.id?' on':'');
     ls.textContent=L(learning===s.id?'bListening':'bListen');
     ls.addEventListener('click',()=>{learning=learning===s.id?null:s.id;renderSlots();});
@@ -384,7 +436,7 @@ async function keepAwake(){try{if(navigator.wakeLock&&document.visibilityState==
 document.addEventListener('visibilitychange',()=>{if(document.body.classList.contains('live'))keepAwake();});
 function goFull(){try{const r=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen({navigationUI:'hide'});if(r&&r.catch)r.catch(()=>{});}catch(e){}}
 function leaveFull(){try{if(document.fullscreenElement){const r=document.exitFullscreen();if(r&&r.catch)r.catch(()=>{});}}catch(e){}}
-$('live').addEventListener('click',()=>{startPlayback();document.body.classList.add('live');keepAwake();goFull();});
+$('live').addEventListener('click',()=>{startPlayback();if(cfg.mauto!==false)musicPlay();document.body.classList.add('live');keepAwake();goFull();});
 $('full').addEventListener('click',()=>{document.fullscreenElement?leaveFull():goFull();});
 $('stop').addEventListener('click',stopPlayback);
 $('exit').addEventListener('click',()=>{
@@ -421,12 +473,102 @@ function applyLang(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=L(el.dataset.i18n);});
   document.querySelectorAll('[data-i18n-ph]').forEach(el=>{el.placeholder=L(el.dataset.i18nPh);});
   $('lang').textContent=LANG==='en'?'ภาษาไทย':'English';
-  renderConn();renderIdle();renderSlots();
+  renderConn();renderIdle();renderSlots();if(typeof renderMusic==='function')renderMusic();
 }
 $('lang').addEventListener('click',()=>{LANG=LANG==='en'?'th':'en';save();applyLang();});
 
+/* ---------- gift picker (grid with pictures) ---------- */
+let pickSlot=null;
+function openPicker(s){pickSlot=s;$('gsearch').value='';fillPicker('');$('gpick').classList.add('on');}
+function closePicker(){$('gpick').classList.remove('on');pickSlot=null;}
+function fillPicker(q){
+  const g=$('ggrid');g.textContent='';
+  const meta=window.GIFT_META||{},icons=window.GIFT_ICONS||{};
+  q=q.trim().toLowerCase();
+  const keys=Object.keys(icons).filter(k=>!q||k.indexOf(q)>=0||((meta[k]&&meta[k].n)||'').toLowerCase().indexOf(q)>=0)
+    .sort((a,b)=>((meta[a]&&meta[a].c)||0)-((meta[b]&&meta[b].c)||0)||a.localeCompare(b));
+  if(!keys.length){const d=document.createElement('div');d.className='note';d.style.gridColumn='1/-1';d.textContent=L('noMatch');g.appendChild(d);return;}
+  for(const k of keys){
+    const m=meta[k]||{n:k,c:0};
+    const b=document.createElement('button');b.type='button';b.className='g';
+    const im=document.createElement('img');im.src=icons[k];im.alt='';b.appendChild(im);
+    b.appendChild(document.createTextNode(m.n));
+    if(m.c){const c=document.createElement('small');c.textContent=m.c+'\u00A0coin'+(m.c>1?'s':'');b.appendChild(c);}
+    b.addEventListener('click',()=>{
+      if(pickSlot){pickSlot.name=m.n;pickSlot.gid=null;save();}
+      closePicker();renderSlots();renderDock();
+    });
+    g.appendChild(b);
+  }
+}
+$('gsearch').addEventListener('input',e=>fillPicker(e.target.value));
+$('gclose').addEventListener('click',closePicker);
+$('gpick').addEventListener('click',e=>{if(e.target===$('gpick'))closePicker();});
+
+/* ---------- background music (mp3 playlist kept on this phone) ---------- */
+const music=new Audio();music.preload='auto';
+const mUrls={};      // key -> object url
+let mIdx=0,ducked=false;
+function mVolume(){return Math.max(0,Math.min(1,(cfg.mvol==null?60:cfg.mvol)/100))*(ducked&&cfg.duck!==false?0.3:1);}
+function musicDuck(on){ducked=on;music.volume=mVolume();}
+async function loadMusic(){
+  cfg.music=(cfg.music||[]).filter(m=>m&&m.k);
+  for(const m of cfg.music){const r=await DB.get(m.k);if(r&&r.blob)mUrls[m.k]=URL.createObjectURL(r.blob);}
+  cfg.music=cfg.music.filter(m=>mUrls[m.k]);
+  renderMusic();
+}
+function musicLoad(i){
+  const list=cfg.music.filter(m=>mUrls[m.k]);
+  if(!list.length)return false;
+  mIdx=((i%list.length)+list.length)%list.length;
+  music.src=mUrls[list[mIdx].k];music.volume=mVolume();return true;
+}
+function musicPlay(){
+  if(!cfg.music.length)return;
+  if(!music.src&&!musicLoad(mIdx))return;
+  music.volume=mVolume();music.play().catch(()=>{});
+}
+function musicPause(){music.pause();}
+function musicNext(){const was=!music.paused||true;if(musicLoad(mIdx+1)&&was)music.play().catch(()=>{});renderMusic();}
+music.addEventListener('ended',musicNext);
+music.addEventListener('error',()=>{if(cfg.music.length>1)musicNext();});
+music.addEventListener('play',renderMusic);music.addEventListener('pause',renderMusic);
+function renderMusic(){
+  const box=$('mList');box.textContent='';
+  if(!cfg.music.length){const d=document.createElement('div');d.className='file';d.textContent=L('noMusic');box.appendChild(d);}
+  cfg.music.forEach((m,i)=>{
+    const row=document.createElement('div');row.className='row';row.style.marginBottom='6px';
+    const nm=document.createElement('div');nm.className='file'+(i===mIdx&&!music.paused?' has':'');nm.style.flex='1';nm.style.margin='0';
+    nm.textContent=(i===mIdx&&!music.paused?'▶ ':'')+m.name;row.appendChild(nm);
+    const rm=document.createElement('button');rm.type='button';rm.className='sm';rm.textContent=L('bClear');
+    rm.addEventListener('click',async()=>{
+      await DB.del(m.k);if(mUrls[m.k]){URL.revokeObjectURL(mUrls[m.k]);delete mUrls[m.k];}
+      const wasCur=i===mIdx;cfg.music.splice(i,1);save();
+      if(wasCur){music.pause();music.removeAttribute('src');music.load();if(i<=mIdx&&mIdx>0)mIdx--;}
+      renderMusic();
+    });
+    row.appendChild(rm);box.appendChild(row);
+  });
+  $('mPlay').textContent=L(music.paused?'bMPlay':'bMPause');
+}
+$('musicFile').addEventListener('change',async e=>{
+  const files=Array.from(e.target.files||[]);e.target.value='';
+  for(const f of files){
+    const k='m_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    if(!(await DB.put(k,{name:f.name,blob:f})))continue;
+    mUrls[k]=URL.createObjectURL(f);cfg.music.push({k,name:f.name});
+  }
+  save();renderMusic();
+});
+$('mPlay').addEventListener('click',()=>{music.paused?musicPlay():musicPause();});
+$('mNext').addEventListener('click',()=>{if(cfg.music.length)musicNext();});
+$('mVol').addEventListener('input',e=>{cfg.mvol=+e.target.value;save();music.volume=mVolume();});
+$('optDuck').addEventListener('change',e=>{cfg.duck=e.target.checked;save();music.volume=mVolume();});
+$('optMAuto').addEventListener('change',e=>{cfg.mauto=e.target.checked;save();});
+
 /* ---------- start ---------- */
 $('tuser').value=cfg.user||'';$('tkey').value=cfg.key||'';
+$('mVol').value=cfg.mvol==null?60:cfg.mvol;$('optDuck').checked=cfg.duck!==false;$('optMAuto').checked=cfg.mauto!==false;
 $('optIdleSound').checked=!!cfg.idleSound;$('optDock').checked=cfg.dock!==false;$('optFill').checked=cfg.fill!==false;
 document.body.classList.toggle('fit',cfg.fill===false);
 setConn('off','idle');applyLang();
@@ -434,7 +576,7 @@ loadClips().then(()=>{renderIdle();renderSlots();applyIdle();log(L('ready'));});
 if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 }
-window.GV={onGift,enqueue,get playing(){return playing;},get queue(){return queue.length;}};
+window.GV={music,onGift,enqueue,get playing(){return playing;},get queue(){return queue.length;}};
 </script>
 </body>
 </html>
